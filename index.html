@@ -116,7 +116,7 @@ body {
 }
 #input-row { display:flex; gap:8px; }
 #input-area input {
-    flex:1; padding:10px 12px; background:rgba(0,0,0,0.04);
+    flex: 1 1 50%; min-width: 0; padding:10px 12px; background:rgba(0,0,0,0.04);
     border:1px solid var(--border); border-radius:11px;
     color:var(--text); font-size:16px; -webkit-appearance:none; appearance:none;
     outline:none; transition:border-color 0.15s;
@@ -363,8 +363,9 @@ body {
 }
 
 /* ══ CSS SVG 아이콘 공통 ══ */
-.ico { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
-.ico svg { display:block; }
+/* iOS Safari 렌더링 버그 방지를 위해 inline-flex 대신 inline-block 사용 */
+.ico { display:inline-block; vertical-align:middle; flex-shrink:0; line-height:0; }
+.ico svg { display:block; width:100%; height:100%; }
 .dd-icon { width:20px; height:20px; }
 .track-btn .ico { width:16px; height:16px; margin-right:5px; }
 #map-layer-btn .ico, #btn-show-logs .ico { width:20px; height:20px; }
@@ -377,10 +378,8 @@ body {
 </head>
 <body>
 
-<!-- 지도 -->
 <div id="map"></div>
 
-<!-- 상단 HUD -->
 <div id="hud-top">
     <div id="hud-left">
         <div id="title-pill">
@@ -406,24 +405,20 @@ body {
     </div>
 </div>
 
-<!-- 지도 위 레이어/기록 버튼 -->
 <button id="map-layer-btn" onclick="toggleMapLayer()">
-    <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>
 </button>
 <div id="btn-show-logs" onclick="openLogSheet()">
-    <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="6"  x2="16" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="12" y2="14"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="6"  x2="16" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="12" y2="14"/></svg></span>
     <div id="log-badge" style="display:none"></div>
 </div>
 
-<!-- 중앙 FAB -->
 <div id="fab-record" onclick="onFabRecord()">
     <span class="ico"><svg viewBox="0 0 28 28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4 C9.6 4 6 7.6 6 12 C6 18 14 24 14 24 C14 24 22 18 22 12 C22 7.6 18.4 4 14 4Z" fill="rgba(255,255,255,0.25)"/><circle cx="14" cy="12" r="3" fill="white" stroke="none"/></svg></span>
     <span id="fab-record-lbl">기록</span>
 </div>
 
-<!-- 하단 바 -->
 <div id="bottom-bar">
-    <!-- 대기 중 -->
     <div id="ctrl-idle">
         <div id="input-area">
             <div id="input-row">
@@ -446,12 +441,11 @@ body {
             산행 출발
         </button>
     </div>
-    <!-- 산행 중 -->
     <div id="ctrl-active">
         <span id="timer-big">00:00:00</span>
         <button id="btn-pause" onclick="onPauseClick()">
             <span class="ico" id="pause-ico">
-                <svg viewBox="0 0 15 15" fill="currentColor"><rect x="2.5" y="2" width="3.5" height="11" rx="1"/><rect x="9"   y="2" width="3.5" height="11" rx="1"/></svg>
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="2.5" y="2" width="3.5" height="11" rx="1"/><rect x="9"   y="2" width="3.5" height="11" rx="1"/></svg>
             </span>
             <span id="pause-lbl">정지</span>
         </button>
@@ -462,28 +456,26 @@ body {
     </div>
 </div>
 
-<!-- 드롭다운 -->
 <div id="dropdown">
     <button class="dd-item" onclick="ddAction('history')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="3" rx="1"/><path d="M3 7 L3 16 C3 16.6 3.4 17 4 17 L16 17 C16.6 17 17 16.6 17 16 L17 7"/><path d="M8 11 L12 11"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="3" rx="1"/><path d="M3 7 L3 16 C3 16.6 3.4 17 4 17 L16 17 C16.6 17 17 16.6 17 16 L17 7"/><path d="M8 11 L12 11"/></svg></span>
         보관함<span id="dd-badge"></span>
     </button>
     <button class="dd-item" onclick="ddAction('stats')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="3" height="6" rx="1"/><rect x="8.5" y="7" width="3" height="11" rx="1"/><rect x="15" y="3" width="3" height="15" rx="1"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="3" height="6" rx="1"/><rect x="8.5" y="7" width="3" height="11" rx="1"/><rect x="15" y="3" width="3" height="15" rx="1"/></svg></span>
         통계
     </button>
     <button class="dd-item" onclick="ddAction('export')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 L10 13"/><polyline points="6,7 10,3 14,7"/><path d="M4 14 L4 16 C4 16.6 4.4 17 5 17 L15 17 C15.6 17 16 16.6 16 16 L16 14"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 L10 13"/><polyline points="6,7 10,3 14,7"/><path d="M4 14 L4 16 C4 16.6 4.4 17 5 17 L15 17 C15.6 17 16 16.6 16 16 L16 14"/></svg></span>
         내보내기
     </button>
     <button class="dd-item" id="dd-new" onclick="ddAction('new')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10 A6 6 0 1 1 10 4"/><polyline points="10,2 10,5.5 13.5,5.5"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10 A6 6 0 1 1 10 4"/><polyline points="10,2 10,5.5 13.5,5.5"/></svg></span>
         새 산행
     </button>
 </div>
 <div id="dd-bd" onclick="closeDropdown()" style="display:none;position:fixed;inset:0;z-index:599"></div>
 
-<!-- 기록 바텀시트 -->
 <div id="log-sheet-backdrop" onclick="closeLogSheet()"></div>
 <div id="log-sheet">
     <div id="sheet-handle-area">
@@ -500,7 +492,6 @@ body {
     </div>
 </div>
 
-<!-- ══ 한계 안내 모달 ══ -->
 <div id="limit-modal" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
     <div id="limit-sheet" style="width:100%;max-width:560px;background:#FAFBFA;border-radius:22px 22px 0 0;padding:20px 20px calc(var(--sab,0px) + 20px);box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
         <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 18px;"></div>
@@ -512,7 +503,6 @@ body {
     </div>
 </div>
 
-<!-- 산행 종료 요약 모달 -->
 <div id="summary-modal" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.5);align-items:flex-end;">
     <div id="summary-sheet" style="width:100%;max-width:560px;margin:0 auto;background:#F5F7F5;border-radius:22px 22px 0 0;padding:20px 20px calc(var(--sab,0px) + 20px);">
         <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 16px;"></div>
@@ -522,7 +512,6 @@ body {
     </div>
 </div>
 
-<!-- 통계 패널 -->
 <div id="stats-panel" style="display:none;position:fixed;inset:0;z-index:700;background:#F0F4F0;flex-direction:column;overflow:hidden;">
     <div style="padding:calc(var(--sat,0px) + 14px) 16px 12px;background:white;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;gap:12px;flex-shrink:0;">
         <button onclick="closeStats()" style="width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.06);border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text);">
@@ -536,7 +525,6 @@ body {
     </div>
 </div>
 
-<!-- 이력 패널 -->
 <div id="history-panel" onclick="onHistoryBdClick(event)">
     <div id="history-sheet">
         <div id="history-handle-area">
@@ -559,8 +547,8 @@ const tileSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/s
 tileNormal.addTo(map);
 let isSat = false;
 
-const MAP_ICO = `<span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>`;
-const SAT_ICO = `<span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="7" height="7" rx="1" transform="rotate(-45 5.5 12.5)"/><line x1="11" y1="5" x2="15" y2="9"/><path d="M12 3 C14 3 17 6 17 8"/><path d="M14 1 C17 1 19 4 19 7" opacity="0.5"/></svg></span>`;
+const MAP_ICO = `<span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>`;
+const SAT_ICO = `<span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="7" height="7" rx="1" transform="rotate(-45 5.5 12.5)"/><line x1="11" y1="5" x2="15" y2="9"/><path d="M12 3 C14 3 17 6 17 8"/><path d="M14 1 C17 1 19 4 19 7" opacity="0.5"/></svg></span>`;
 
 window.toggleMapLayer = function(){
     const btn = document.getElementById('map-layer-btn');
@@ -811,8 +799,8 @@ function clearLocDot(){
 }
 
 /* ══ 일시정지 / 재개 ══ */
-const PAUSE_SVG  = `<svg viewBox="0 0 15 15" fill="currentColor"><rect x="2.5" y="2" width="3.5" height="11" rx="1"/><rect x="9" y="2" width="3.5" height="11" rx="1"/></svg>`;
-const RESUME_SVG = `<svg viewBox="0 0 15 15" fill="currentColor"><polygon points="3,2 13,7.5 3,13"/></svg>`;
+const PAUSE_SVG  = `<svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><rect x="2.5" y="2" width="3.5" height="11" rx="1"/><rect x="9" y="2" width="3.5" height="11" rx="1"/></svg>`;
+const RESUME_SVG = `<svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><polygon points="3,2 13,7.5 3,13"/></svg>`;
 
 function doPause(){
     if(isPaused) return;
@@ -1257,7 +1245,6 @@ function renderStats(){
     .rec-sub{font-size:11px;color:var(--text-dim);font-weight:400;}
     </style>
 
-    <!-- KPI -->
     <div class="st-kpi">
         <div class="st-kpi-card"><div class="st-kpi-val">${all.length}</div><div class="st-kpi-lbl">총 산행</div></div>
         <div class="st-kpi-card"><div class="st-kpi-val">${totalDist.toFixed(1)}</div><div class="st-kpi-lbl">총 거리 km</div></div>
@@ -1269,7 +1256,6 @@ function renderStats(){
         <div class="st-kpi-card"><div class="st-kpi-val">${topLocs.length>0?topLocs[0][0].slice(0,4):'-'}</div><div class="st-kpi-lbl">최다 방문</div></div>
     </div>
 
-    <!-- 개인 기록 -->
     <div class="st-sec" style="margin-top:14px;">
         <div class="st-sec-title">개인 기록</div>
         <div class="rec-row"><span class="rec-lbl">최장 거리</span><span class="rec-val">${maxDist.dist.toFixed(2)}km <span class="rec-sub">${maxDist.loc} ${maxDist.date}</span></span></div>
@@ -1277,7 +1263,6 @@ function renderStats(){
         <div class="rec-row"><span class="rec-lbl">최다 지점</span><span class="rec-val">${hikesData.reduce((a,b)=>b.pts>a.pts?b:a,hikesData[0]).pts}개 <span class="rec-sub">${hikesData.reduce((a,b)=>b.pts>a.pts?b:a,hikesData[0]).loc}</span></span></div>
     </div>
 
-    <!-- 자주 간 산 -->
     <div class="st-sec">
         <div class="st-sec-title">자주 찾은 산 TOP ${topLocs.length}</div>
         ${topLocs.map(([name,cnt],i)=>`
@@ -1288,7 +1273,6 @@ function renderStats(){
         </div>`).join('')}
     </div>
 
-    <!-- 월별 차트 -->
     <div class="st-sec">
         <div class="st-sec-title">${thisYear}년 월별 산행</div>
         ${monthly.map((cnt,i)=>`
@@ -1299,7 +1283,6 @@ function renderStats(){
         </div>`).join('')}
     </div>
 
-    <!-- 요일별 차트 -->
     <div class="st-sec">
         <div class="st-sec-title">요일별 산행 빈도</div>
         ${dayNames.map((d,i)=>`
@@ -1310,7 +1293,6 @@ function renderStats(){
         </div>`).join('')}
     </div>
 
-    <!-- 활동 캘린더 -->
     <div class="st-sec">
         <div class="st-sec-title">활동 캘린더 (최근 1년)</div>
         <div class="cal-grid">

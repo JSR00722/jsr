@@ -1,837 +1,982 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>山行</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        :root {
-            --bg: #0D1117;
-            --panel: #161B22;
-            --panel2: #1C2330;
-            --accent: #4ECDC4;
-            --accent2: #FF6B35;
-            --text: #E6EDF3;
-            --text-dim: #7D8590;
-            --border: #30363D;
-            --success: #3FB950;
-            --danger: #F85149;
-            --radius: 10px;
-            /* safe area 변수 — Samsung Internet용 constant() 병기 */
-            --sat: constant(safe-area-inset-top);
-            --sar: constant(safe-area-inset-right);
-            --sab: constant(safe-area-inset-bottom);
-            --sal: constant(safe-area-inset-left);
-            --sat: env(safe-area-inset-top);
-            --sar: env(safe-area-inset-right);
-            --sab: env(safe-area-inset-bottom);
-            --sal: env(safe-area-inset-left);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>山行</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+    --sat: env(safe-area-inset-top,0px);
+    --sab: env(safe-area-inset-bottom,0px);
+    --sal: env(safe-area-inset-left,0px);
+    --sar: env(safe-area-inset-right,0px);
+    --glass: rgba(255,255,255,0.88);
+    --glass2: rgba(255,255,255,0.96);
+    --shadow: 0 4px 24px rgba(0,0,0,0.13);
+    --shadow-sm: 0 2px 10px rgba(0,0,0,0.10);
+    --green: #2E7D55;
+    --green-light: #4CAF7D;
+    --sky: #4A90D9;
+    --danger: #E05252;
+    --warn: #E09820;
+    --text: #1A2332;
+    --text-dim: #6B7A8D;
+    --border: rgba(0,0,0,0.08);
+    --r: 18px;
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+html,body { margin:0; padding:0; height:100%; overflow:hidden; background:#e8efe8; }
+body {
+    font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    position:fixed; inset:0;
+    max-width:560px; margin:0 auto;
+}
 
-        /* ── 터치 하이라이트 제거 (iOS/Android 공통) ── */
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-        }
+/* ══ 지도: 화면 전체 ══ */
+#map { position:absolute; inset:0; z-index:0; }
 
-        html {
-            height: 100%;
-            background: #080C10;
-        }
+/* ══ 상단 HUD ══ */
+#hud-top {
+    position:absolute; top:0; left:0; right:0; z-index:10;
+    padding: calc(var(--sat) + 12px) 14px 0;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    pointer-events:none;
+}
+/* 좌: 타이틀 + 상태 pill */
+#hud-left { display:flex; flex-direction:column; gap:6px; pointer-events:auto; }
+#title-pill {
+    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-radius:14px; padding:7px 14px;
+    box-shadow:var(--shadow-sm); border:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+}
+#title-text { font-size:17px; font-weight:800; letter-spacing:3px; color:var(--text); }
+#status-dot {
+    width:8px; height:8px; border-radius:50%; background:#B0BEC5; flex-shrink:0;
+    transition:background 0.3s;
+}
+#status-dot.active { background:#4CAF7D; box-shadow:0 0 0 3px rgba(76,175,125,0.25); animation:pulse 2s infinite; }
+#status-dot.paused { background:var(--warn); box-shadow:0 0 0 3px rgba(224,152,32,0.25); }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(76,175,125,0.25)} 50%{box-shadow:0 0 0 6px rgba(76,175,125,0.1)} }
 
-        body {
-            margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
-            display: flex; flex-direction: column;
-            background: var(--bg); color: var(--text);
-            overflow: hidden;
-            max-width: 560px;
-            margin-left: auto; margin-right: auto;
-            padding-left: var(--sal);
-            padding-right: var(--sar);
-            /* iOS Safari 주소창/툴바 대응:
-               position fixed + inset 0 으로 실제 표시 영역에 정확히 고정.
-               100vh/dvh 방식은 Safari 툴바가 올라올 때 잘리는 문제가 있음. */
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100%;
-        }
+#stat-pill {
+    background:var(--glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-radius:12px; padding:6px 12px;
+    box-shadow:var(--shadow-sm); border:1px solid var(--border);
+    display:none; align-items:center; gap:10px;
+}
+#stat-pill.show { display:flex; }
+.stat-item { display:flex; flex-direction:column; align-items:center; gap:1px; }
+.stat-val { font-size:14px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.stat-lbl { font-size:10px; color:var(--text-dim); font-weight:500; }
+.stat-sep { width:1px; height:28px; background:var(--border); }
 
-        /* ─── 헤더 ─── */
-        #header {
-            padding: 10px 14px;
-            padding-top: max(10px, var(--sat));
-            background: var(--panel);
-            border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; gap: 10px;
-            z-index: 200; flex-shrink: 0;
-            position: relative;
-        }
-        #header-left { display: flex; align-items: center; gap: 5px; flex: 1; }
-        #header-title {
-            position: absolute; left: 50%; transform: translateX(-50%);
-            font-size: 17px; font-weight: 800; letter-spacing: 3px;
-            color: var(--text); pointer-events: none;
-        }
-        #status-bar { display: flex; align-items: center; gap: 5px; }
-        #status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); transition: background 0.3s; flex-shrink: 0; }
-        #status-dot.active { background: var(--success); box-shadow: 0 0 0 2px rgba(63,185,80,0.25); animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100%{box-shadow:0 0 0 2px rgba(63,185,80,0.25)} 50%{box-shadow:0 0 0 5px rgba(63,185,80,0.1)} }
-        #status-text { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-        #timer-display { font-size: 11px; color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; display: none; white-space: nowrap; }
+/* 우: 메뉴 버튼 */
+#hud-right { display:flex; flex-direction:column; gap:8px; align-items:flex-end; pointer-events:auto; }
+.icon-btn {
+    width:42px; height:42px; border-radius:13px;
+    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--border); box-shadow:var(--shadow-sm);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px; color:var(--text); transition:transform 0.12s, background 0.12s;
+}
+.icon-btn:active { transform:scale(0.92); background:rgba(255,255,255,1); }
 
-        /* ─── 헤더 메뉴 버튼 ─── */
-        #btn-menu {
-            background: var(--panel2); border: 1px solid var(--border);
-            color: var(--text-dim); width: 36px; height: 36px;
-            border-radius: 8px; font-size: 18px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            /* 데스크톱 hover */
-            transition: background 0.15s, transform 0.1s;
-        }
-        #btn-menu:hover { background: var(--border); color: var(--text); }
-        #btn-menu:active { transform: scale(0.93); }
+/* ══ 중앙 FAB (산행 중 지점기록) ══ */
+#fab-record {
+    position:absolute; bottom:calc(var(--sab) + 100px); left:50%; transform:translateX(-50%);
+    z-index:10; display:none;
+    width:72px; height:72px; border-radius:50%;
+    background:linear-gradient(145deg, var(--green-light), var(--green));
+    box-shadow:0 6px 28px rgba(46,125,85,0.45);
+    border:3px solid rgba(255,255,255,0.6);
+    align-items:center; justify-content:center; cursor:pointer;
+    transition:transform 0.12s;
+    flex-direction:column; gap:2px;
+}
+#fab-record.show { display:flex; }
+#fab-record:active { transform:translateX(-50%) scale(0.93); }
+#fab-record-icon { font-size:26px; line-height:1; }
+#fab-record-lbl { font-size:9px; font-weight:700; color:white; opacity:0.85; letter-spacing:0.3px; }
 
-        /* ─── 드롭다운 ─── */
-        #dropdown {
-            position: fixed; top: max(54px, calc(var(--sat) + 54px)); right: 14px; z-index: 600;
-            background: var(--panel2); border: 1px solid var(--border);
-            border-radius: 11px; overflow: hidden;
-            display: none; flex-direction: column;
-            min-width: 160px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        }
-        #dropdown.open { display: flex; }
-        .dd-item {
-            padding: 13px 16px; font-size: 13px; cursor: pointer;
-            display: flex; align-items: center; gap: 10px;
-            color: var(--text); border: none; background: none;
-            text-align: left; width: 100%;
-            transition: background 0.1s;
-        }
-        /* 데스크톱 hover */
-        .dd-item:hover { background: rgba(255,255,255,0.05); }
-        .dd-item:active { background: var(--border); }
-        .dd-item + .dd-item { border-top: 1px solid var(--border); }
-        .dd-icon { font-size: 15px; }
-        #dd-history-badge {
-            margin-left: auto; background: var(--accent2); color: white;
-            font-size: 10px; font-weight: 700;
-            min-width: 18px; height: 18px; border-radius: 9px;
-            display: none; align-items: center; justify-content: center; padding: 0 4px;
-        }
-        #dd-new-item { display: none; }
+/* ══ 하단 컨트롤 바 ══ */
+#bottom-bar {
+    position:absolute; bottom:0; left:0; right:0; z-index:10;
+    padding:0 16px calc(var(--sab) + 12px);
+}
 
-        /* ─── 입력 영역 ─── */
-        #inputs {
-            display: flex; gap: 6px; padding: 8px 14px;
-            background: var(--bg); border-bottom: 1px solid var(--border);
-            flex-shrink: 0; z-index: 100;
-        }
-        #inputs.hidden { display: none; }
-        #inputs input {
-            flex: 1; padding: 8px 10px;
-            background: var(--panel2); border: 1px solid var(--border);
-            border-radius: 8px; color: var(--text); font-size: 13px;
-            transition: border-color 0.15s;
-            /* iOS Safari: date input 기본 스타일 제거 */
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        #inputs input:focus { outline: none; border-color: var(--accent); }
-        /* 웹킷 달력 아이콘 다크 처리 */
-        #hike-date::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; opacity: 0.7; }
-        /* 데스크톱 hover */
-        #inputs input:hover { border-color: rgba(255,255,255,0.2); }
+/* 대기 중 */
+#ctrl-idle { display:flex; flex-direction:column; gap:10px; }
+#input-area {
+    background:var(--glass2); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border-radius:var(--r); padding:12px; border:1px solid var(--border);
+    box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px;
+}
+#input-row { display:flex; gap:8px; }
+#input-area input {
+    flex:1; padding:10px 12px; background:rgba(0,0,0,0.04);
+    border:1px solid var(--border); border-radius:11px;
+    color:var(--text); font-size:15px; -webkit-appearance:none; appearance:none;
+    outline:none; transition:border-color 0.15s;
+}
+#input-area input:focus { border-color:var(--green-light); }
+#hike-date::-webkit-calendar-picker-indicator { opacity:0.5; cursor:pointer; }
+/* 추적 모드 토글 */
+#track-toggle {
+    display:flex; background:rgba(0,0,0,0.05); border-radius:10px; overflow:hidden;
+}
+.track-btn {
+    flex:1; padding:8px 0; font-size:13px; font-weight:600; color:var(--text-dim);
+    border:none; background:none; cursor:pointer; transition:all 0.15s;
+}
+.track-btn.on { background:white; color:var(--green); border-radius:9px; box-shadow:0 1px 6px rgba(0,0,0,0.1); }
+.track-btn:disabled { opacity:0.4; pointer-events:none; }
 
-        /* ─── 지도 ─── */
-        #map-wrapper { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
-        #map { flex: 1; width: 100%; z-index: 1; min-height: 0; }
+#btn-start {
+    padding:17px; font-size:17px; font-weight:800; border-radius:var(--r);
+    border:none; color:white; cursor:pointer;
+    background:linear-gradient(135deg, var(--green), var(--green-light));
+    box-shadow:0 4px 20px rgba(46,125,85,0.35);
+    transition:transform 0.12s, filter 0.12s;
+}
+#btn-start:active { transform:scale(0.98); }
 
-        /* 지도 위 오버레이 */
-        #map-overlay {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            z-index: 10; pointer-events: none;
-            padding: 6px 10px;
-            display: flex; gap: 8px; justify-content: flex-end;
-        }
-        .map-stat {
-            background: rgba(13,17,23,0.85);
-            /* Firefox는 backdrop-filter 미지원 → 폴백으로 불투명 배경 */
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            border: 1px solid var(--border); border-radius: 7px;
-            padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 4px;
-        }
-        @supports not (backdrop-filter: blur(1px)) {
-            .map-stat { background: rgba(13,17,23,0.97); }
-        }
-        .map-stat-label { color: var(--text-dim); }
-        .map-stat-val { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
-        #map-layer-btn {
-            position: absolute; top: 10px; right: 10px; z-index: 500;
-            background: rgba(13,17,23,0.85); border: 1px solid var(--border);
-            color: var(--text-dim); padding: 6px 10px; border-radius: 7px;
-            font-size: 11px; cursor: pointer; font-weight: 600;
-            transition: background 0.15s, color 0.15s;
-        }
-        #map-layer-btn:hover { background: var(--panel2); color: var(--text); }
+/* 산행 중 — 일시정지+종료 작은 바 */
+#ctrl-active {
+    display:none;
+    background:var(--glass2); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border-radius:var(--r); padding:10px 12px; border:1px solid var(--border);
+    box-shadow:var(--shadow); gap:8px; align-items:center;
+}
+#ctrl-active.show { display:flex; }
+#timer-big {
+    flex:1; font-size:22px; font-weight:800; color:var(--text);
+    font-variant-numeric:tabular-nums; letter-spacing:-0.5px;
+}
+#timer-big.paused { color:var(--warn); }
+#btn-pause {
+    padding:9px 14px; border-radius:11px; border:none; cursor:pointer;
+    font-size:13px; font-weight:700;
+    background:rgba(224,152,32,0.12); color:var(--warn);
+    transition:all 0.12s;
+}
+#btn-pause.on { background:rgba(76,175,125,0.12); color:var(--green); }
+#btn-pause:active { transform:scale(0.95); }
+#btn-end {
+    padding:9px 14px; border-radius:11px; border:none; cursor:pointer;
+    font-size:13px; font-weight:700;
+    background:rgba(224,82,82,0.1); color:var(--danger);
+    transition:all 0.12s;
+}
+#btn-end:active { transform:scale(0.95); }
 
-        /* ─── 기록 리스트 ─── */
-        #log-container {
-            height: 28vh; overflow-y: auto; background: var(--bg);
-            border-top: 1px solid var(--border); flex-shrink: 0;
-            /* iOS Safari 관성 스크롤 */
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-        }
-        #log-header {
-            position: sticky; top: 0; background: var(--bg);
-            padding: 8px 14px 6px; display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--border); z-index: 5;
-        }
-        #log-header-left { display: flex; align-items: center; gap: 8px; }
-        #log-title { font-size: 12px; color: var(--text-dim); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
-        #log-count { font-size: 11px; color: var(--accent); font-weight: 600; background: rgba(78,205,196,0.1); padding: 2px 6px; border-radius: 5px; }
-        #history-count { font-size: 11px; color: var(--text-dim); }
-        #logs { padding: 6px 10px; }
-        .log-entry {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 10px; border-radius: 8px;
-            background: var(--panel); margin-bottom: 5px; font-size: 13px;
-        }
-        .log-type-badge {
-            font-size: 10px; font-weight: 700; padding: 2px 6px;
-            border-radius: 5px; min-width: 32px; text-align: center; flex-shrink: 0;
-        }
-        .badge-출발 { background: rgba(63,185,80,0.15); color: var(--success); }
-        .badge-기록 { background: rgba(78,205,196,0.15); color: var(--accent); }
-        .badge-종료 { background: rgba(248,81,73,0.15); color: var(--danger); }
-        .log-time { font-size: 11px; color: var(--text-dim); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-        .log-memo { color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-        .log-coord { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
-        .btn-delete {
-            background: none; border: none; color: var(--text-dim);
-            cursor: pointer; font-size: 15px; padding: 0 3px; flex-shrink: 0;
-            transition: color 0.15s;
-            /* 모바일 탭 영역 확보 */
-            min-width: 28px; min-height: 28px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .btn-delete:hover { color: var(--danger); }
-        #empty-log { color: var(--text-dim); text-align: center; padding: 20px 10px; font-size: 12px; display: none; }
-        #empty-log.show { display: block; }
+/* ══ 메뉴 드롭다운 ══ */
+#dropdown {
+    position:fixed; top:calc(var(--sat) + 62px); right:14px; z-index:600;
+    background:var(--glass2); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-radius:16px; border:1px solid var(--border);
+    box-shadow:0 12px 40px rgba(0,0,0,0.18);
+    display:none; flex-direction:column; min-width:180px; overflow:hidden;
+}
+#dropdown.open { display:flex; }
+.dd-item {
+    padding:14px 18px; font-size:15px; font-weight:500; color:var(--text);
+    border:none; background:none; text-align:left; cursor:pointer;
+    display:flex; align-items:center; gap:10px; transition:background 0.1s;
+}
+.dd-item:hover { background:rgba(0,0,0,0.04); }
+.dd-item:active { background:rgba(0,0,0,0.08); }
+.dd-item + .dd-item { border-top:1px solid var(--border); }
+.dd-icon { font-size:16px; }
+#dd-badge {
+    margin-left:auto; background:var(--danger); color:white;
+    font-size:11px; font-weight:700; min-width:20px; height:20px;
+    border-radius:10px; display:none; align-items:center; justify-content:center; padding:0 5px;
+}
+#dd-new { display:none; }
 
-        /* ─── 하단 컨트롤 ─── */
-        #controls {
-            background: var(--panel); border-top: 1px solid var(--border);
-            padding: 12px 16px;
-            /* iOS 홈 인디케이터 대응 — constant() 먼저, env() 덮어쓰기 */
-            padding-bottom: max(12px, constant(safe-area-inset-bottom));
-            padding-bottom: max(12px, env(safe-area-inset-bottom));
-            z-index: 200; flex-shrink: 0;
-        }
+/* ══ 기록 바텀시트 ══ */
+#log-sheet-backdrop {
+    position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0);
+    display:none; transition:background 0.3s;
+}
+#log-sheet-backdrop.open { display:block; background:rgba(0,0,0,0.25); }
+#log-sheet {
+    position:fixed; left:0; right:0; bottom:0; z-index:500;
+    max-width:560px; margin:0 auto;
+    background:#F5F7F5; border-radius:22px 22px 0 0;
+    box-shadow:0 -8px 40px rgba(0,0,0,0.15);
+    transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    max-height:78vh; display:flex; flex-direction:column;
+    padding-bottom:var(--sab);
+}
+#log-sheet.open { transform:translateY(0); }
+#sheet-handle-area {
+    padding:12px 16px 0; display:flex; flex-direction:column; gap:6px; flex-shrink:0;
+}
+#sheet-handle { width:40px; height:4px; background:#C8D0C8; border-radius:2px; margin:0 auto; }
+#sheet-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,0.07); }
+#sheet-title { font-size:16px; font-weight:700; color:var(--text); }
+#sheet-meta { font-size:13px; color:var(--text-dim); }
+#sheet-close { background:rgba(0,0,0,0.07); border:none; width:30px; height:30px; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-dim); }
 
-        /* 대기 중 */
-        #ctrl-idle { display: flex; flex-direction: column; gap: 8px; }
-        #btn-start {
-            width: 100%; padding: 16px 0;
-            font-size: 16px; font-weight: 800; letter-spacing: 0.3px;
-            border-radius: 12px; border: none; color: white; cursor: pointer;
-            background: linear-gradient(135deg, #1E8449, #27AE60);
-            transition: transform 0.12s, filter 0.12s;
-        }
-        #btn-start:hover { filter: brightness(1.08); }
-        #btn-start:active { transform: scale(0.98); }
+/* 기록 리스트 — 스크롤바 숨김 */
+#log-scroll {
+    overflow-y:auto; flex:1; padding:8px 12px 12px;
+    scrollbar-width:none;
+}
+#log-scroll::-webkit-scrollbar { display:none; }
+#log-empty { text-align:center; padding:40px 20px; color:var(--text-dim); font-size:15px; }
 
-        /* 산행 중 */
-        #ctrl-active { display: none; gap: 10px; align-items: stretch; }
-        #btn-record {
-            flex: 1; padding: 18px 0;
-            font-size: 17px; font-weight: 800; letter-spacing: -0.3px;
-            border-radius: 12px; border: none; color: #0D1117; cursor: pointer;
-            background: linear-gradient(135deg, #1A8A83, #4ECDC4);
-            transition: transform 0.12s, filter 0.12s;
-        }
-        #btn-record:hover { filter: brightness(1.08); }
-        #btn-record:active { transform: scale(0.97); }
-        #btn-record-label { font-size: 10px; font-weight: 500; opacity: 0.7; display: block; margin-top: 2px; }
-        #btn-end {
-            flex: 0 0 64px; padding: 0;
-            border-radius: 12px; border: 2px solid rgba(248,81,73,0.4);
-            background: rgba(248,81,73,0.08); color: var(--danger);
-            cursor: pointer; font-size: 11px; font-weight: 700;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 3px; transition: all 0.15s;
-        }
-        #btn-end:hover { background: rgba(248,81,73,0.18); border-color: rgba(248,81,73,0.7); }
-        #btn-end:active { transform: scale(0.96); }
-        #btn-end-icon { font-size: 20px; line-height: 1; }
-        #btn-end:disabled, #btn-record:disabled { opacity: 0.3; pointer-events: none; }
+/* 타임라인 스타일 기록 */
+.log-entry {
+    display:flex; align-items:flex-start; gap:10px; padding:7px 0;
+    position:relative;
+}
+.log-entry + .log-entry::before {
+    content:''; position:absolute; left:15px; top:-7px;
+    width:1.5px; height:7px; background:#D8E0D8;
+}
+.log-dot {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+    margin-top:1px;
+}
+.dot-출발  { background:rgba(76,175,125,0.15); }
+.dot-기록  { background:rgba(74,144,217,0.15); }
+.dot-일시정지 { background:rgba(224,152,32,0.15); }
+.dot-재개  { background:rgba(76,175,125,0.12); }
+.dot-종료  { background:rgba(224,82,82,0.12); }
+.log-body { flex:1; min-width:0; }
+.log-top { display:flex; align-items:center; gap:6px; }
+.log-type { font-size:13px; font-weight:700; color:var(--text); }
+.log-time { font-size:12px; color:var(--text-dim); font-variant-numeric:tabular-nums; }
+.log-memo { font-size:13px; color:var(--text-dim); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.log-coord { font-size:11px; color:#A0AABA; margin-top:1px; }
+.btn-del {
+    background:none; border:none; color:#C0C8C0; cursor:pointer;
+    font-size:16px; padding:4px 6px; flex-shrink:0; transition:color 0.15s;
+    min-width:28px; min-height:28px; display:flex; align-items:center; justify-content:center;
+}
+.btn-del:active { color:var(--danger); }
 
-        /* ─── 이력 패널 ─── */
-        #history-panel {
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,0.6); display: none; align-items: flex-end;
-        }
-        #history-panel.open { display: flex; }
-        #history-sheet {
-            width: 100%; background: var(--panel);
-            border-radius: 18px 18px 0 0; border-top: 1px solid var(--border);
-            max-height: 75vh; display: flex; flex-direction: column;
-            /* iOS 패널 하단 safe area */
-            padding-bottom: constant(safe-area-inset-bottom);
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-        #history-sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 4px; }
-        #history-sheet-header {
-            padding: 8px 16px 10px; display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--border);
-        }
-        #history-sheet-title { font-size: 14px; font-weight: 700; }
-        #btn-close-history {
-            background: none; border: none; color: var(--text-dim); font-size: 22px; cursor: pointer; padding: 0;
-            transition: color 0.15s;
-        }
-        #btn-close-history:hover { color: var(--text); }
-        #history-list {
-            overflow-y: auto; padding: 10px 12px; flex: 1;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-        }
-        .history-item {
-            padding: 10px 12px; border-radius: 9px; background: var(--panel2);
-            margin-bottom: 8px; border: 1px solid var(--border); cursor: pointer;
-            transition: border-color 0.15s;
-        }
-        .history-item:hover { border-color: rgba(78,205,196,0.4); }
-        .history-item:active { border-color: var(--accent); }
-        .history-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .history-item-name { font-size: 14px; font-weight: 700; }
-        .history-item-date { font-size: 11px; color: var(--text-dim); }
-        .history-item-stats { display: flex; gap: 12px; flex-wrap: wrap; }
-        .history-item-stat { font-size: 11px; color: var(--text-dim); }
-        .history-item-stat span { color: var(--accent); font-weight: 600; }
-        .btn-del-history {
-            background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; margin-left: 8px;
-            transition: color 0.15s;
-        }
-        .btn-del-history:hover { color: var(--danger); }
+/* ══ 이력 패널 ══ */
+#history-panel {
+    position:fixed; inset:0; z-index:700; background:rgba(0,0,0,0.4);
+    display:none; align-items:flex-end;
+}
+#history-panel.open { display:flex; }
+#history-sheet {
+    width:100%; max-width:560px; margin:0 auto;
+    background:#F5F7F5; border-radius:22px 22px 0 0;
+    max-height:78vh; display:flex; flex-direction:column;
+    padding-bottom:var(--sab);
+}
+#history-handle-area { padding:12px 16px 0; flex-shrink:0; }
+#history-handle { width:40px; height:4px; background:#C8D0C8; border-radius:2px; margin:0 auto 10px; }
+#history-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid rgba(0,0,0,0.07); }
+#history-title { font-size:16px; font-weight:700; color:var(--text); }
+#history-close { background:rgba(0,0,0,0.07); border:none; width:30px; height:30px; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-dim); }
+#history-scroll {
+    overflow-y:auto; flex:1; padding:8px 12px 12px;
+    scrollbar-width:none;
+}
+#history-scroll::-webkit-scrollbar { display:none; }
+.h-item {
+    padding:12px 14px; border-radius:14px; background:white;
+    margin-bottom:8px; box-shadow:0 1px 6px rgba(0,0,0,0.06); cursor:pointer;
+    transition:transform 0.1s;
+}
+.h-item:active { transform:scale(0.98); }
+.h-item-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.h-item-name { font-size:15px; font-weight:700; color:var(--text); }
+.h-item-date { font-size:12px; color:var(--text-dim); }
+.h-item-stats { display:flex; gap:12px; flex-wrap:wrap; }
+.h-item-stat { font-size:12px; color:var(--text-dim); }
+.h-item-stat b { color:var(--green); font-weight:700; }
+.btn-del-h { background:none; border:none; color:#C0C8C0; font-size:16px; cursor:pointer; margin-left:6px; }
+.btn-del-h:active { color:var(--danger); }
 
-        /* ─── 데스크톱 가로모드 / 태블릿 레이아웃 ─── */
-        @media (min-width: 560px) {
-            body { border-left: 1px solid #1C2330; border-right: 1px solid #1C2330; }
-        }
+/* ══ 지도 위 레이어 버튼 ══ */
+#map-layer-btn {
+    position:absolute; bottom:calc(var(--sab) + 96px); right:16px; z-index:10;
+    width:42px; height:42px; border-radius:13px;
+    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--border); box-shadow:var(--shadow-sm);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:13px; font-weight:700; color:var(--text);
+    transition:transform 0.12s;
+}
+#map-layer-btn:active { transform:scale(0.92); }
 
-        /* 가로 모드 (모바일 landscape) — 기록창 높이 축소, 버튼 컴팩트 */
-        @media (max-height: 500px) and (orientation: landscape) {
-            #log-container { height: 22vh; }
-            #btn-start { padding: 11px 0; font-size: 14px; }
-            #btn-record { padding: 12px 0; font-size: 15px; }
-            #btn-record-label { display: none; }
-            #btn-end { flex: 0 0 56px; }
-            #controls { padding-top: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-            #inputs { padding: 6px 14px; }
-            #inputs input { padding: 6px 10px; }
-        }
+/* 기록 보기 버튼 (지도 위) */
+#btn-show-logs {
+    position:absolute; bottom:calc(var(--sab) + 148px); right:16px; z-index:10;
+    width:42px; height:42px; border-radius:13px;
+    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--border); box-shadow:var(--shadow-sm);
+    display:none; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px; transition:transform 0.12s;
+}
+#btn-show-logs.show { display:flex; }
+#btn-show-logs:active { transform:scale(0.92); }
+#log-badge {
+    position:absolute; top:-5px; right:-5px;
+    background:var(--green); color:white; font-size:10px; font-weight:800;
+    width:18px; height:18px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid white;
+}
 
-        /* 접근성: 시스템 다크모드 강제 사용 시 (이미 다크 테마이므로 유지) */
-        @media (prefers-color-scheme: light) {
-            /* 라이트모드 환경에서도 앱 자체는 다크 유지 (등산 앱 특성상) */
-        }
+/* 현재위치 점 */
+.loc-dot {
+    width:14px; height:14px; border-radius:50%;
+    background:#2979FF; border:3px solid white;
+    box-shadow:0 0 0 4px rgba(41,121,255,0.2);
+}
 
-        /* 접근성: 애니메이션 줄이기 설정 시 pulse 제거 */
-        @media (prefers-reduced-motion: reduce) {
-            #status-dot.active { animation: none; }
-            * { transition-duration: 0.01ms !important; }
-        }
-    </style>
+/* @supports 폴백 */
+@supports not (backdrop-filter:blur(1px)) {
+    #title-pill,#stat-pill,.icon-btn,#input-area,#ctrl-active,#dropdown { background:rgba(255,255,255,0.97); }
+    #map-layer-btn,#btn-show-logs { background:rgba(255,255,255,0.97); }
+}
+@media (prefers-reduced-motion:reduce) {
+    #status-dot.active { animation:none; }
+    * { transition-duration:0.01ms !important; }
+}
+@media (max-height:500px) and (orientation:landscape) {
+    #fab-record { bottom:calc(var(--sab) + 76px); width:60px; height:60px; }
+    #fab-record-icon { font-size:22px; }
+    #fab-record-lbl { display:none; }
+    #ctrl-active { padding:8px 10px; }
+    #timer-big { font-size:18px; }
+    #ctrl-idle { gap:8px; }
+    #input-area { padding:8px; }
+    #map-layer-btn { bottom:calc(var(--sab) + 72px); }
+    #btn-show-logs { bottom:calc(var(--sab) + 118px); }
+}
+</style>
 </head>
 <body>
 
-<div id="header">
-    <div id="header-left">
-        <div id="status-bar">
+<!-- 지도 -->
+<div id="map"></div>
+
+<!-- 상단 HUD -->
+<div id="hud-top">
+    <div id="hud-left">
+        <div id="title-pill">
             <div id="status-dot"></div>
-            <span id="status-text">대기 중</span>
-            <span id="timer-display">00:00:00</span>
+            <span id="title-text">山行</span>
+        </div>
+        <div id="stat-pill">
+            <div class="stat-item">
+                <span class="stat-val" id="stat-dist">0.00</span>
+                <span class="stat-lbl">km</span>
+            </div>
+            <div class="stat-sep"></div>
+            <div class="stat-item">
+                <span class="stat-val" id="stat-pts">0</span>
+                <span class="stat-lbl">지점</span>
+            </div>
         </div>
     </div>
-    <div id="header-title">山行</div>
-    <button id="btn-menu" onclick="toggleDropdown()" aria-label="메뉴">···</button>
-</div>
-
-<div id="dropdown">
-    <button class="dd-item" id="dd-history-item" onclick="ddAction('history')">
-        <span class="dd-icon">🗂</span> 보관함
-        <span id="dd-history-badge"></span>
-    </button>
-    <button class="dd-item" onclick="ddAction('export')">
-        <span class="dd-icon">📊</span> 엑셀 내보내기
-    </button>
-    <button class="dd-item" id="dd-new-item" onclick="ddAction('new')">
-        <span class="dd-icon">🔄</span> 새 산행 시작
-    </button>
-</div>
-<div id="dropdown-backdrop" onclick="closeDropdown()" style="display:none;position:fixed;inset:0;z-index:599;"></div>
-
-<div id="inputs">
-    <input type="date" id="hike-date">
-    <input type="text" id="hike-location" placeholder="산 이름 (예: 지리산)">
-</div>
-
-<div id="map-wrapper">
-    <div id="map"></div>
-    <div id="map-overlay">
-        <div class="map-stat"><span class="map-stat-label">누적거리</span><span class="map-stat-val" id="stat-dist">0.00km</span></div>
-        <div class="map-stat"><span class="map-stat-label">지점수</span><span class="map-stat-val" id="stat-pts">0</span></div>
+    <div id="hud-right">
+        <div class="icon-btn" onclick="toggleDropdown()">···</div>
     </div>
-    <button id="map-layer-btn" onclick="toggleMapLayer()">위성</button>
 </div>
 
-<div id="log-container">
-    <div id="log-header">
-        <div id="log-header-left">
-            <span id="log-title">기록</span>
-            <span id="log-count">0</span>
-        </div>
-        <span id="history-count">보관: 0건</span>
-    </div>
-    <div id="empty-log" class="show">출발 버튼을 눌러 산행을 시작하세요.</div>
-    <div id="logs"></div>
+<!-- 지도 위 레이어/기록 버튼 -->
+<button id="map-layer-btn" onclick="toggleMapLayer()">🗺</button>
+<div id="btn-show-logs" onclick="openLogSheet()">
+    📋
+    <div id="log-badge" style="display:none"></div>
 </div>
 
-<div id="controls">
+<!-- 중앙 FAB -->
+<div id="fab-record" onclick="onFabRecord()">
+    <span id="fab-record-icon">📍</span>
+    <span id="fab-record-lbl">기록</span>
+</div>
+
+<!-- 하단 바 -->
+<div id="bottom-bar">
+    <!-- 대기 중 -->
     <div id="ctrl-idle">
+        <div id="input-area">
+            <div id="input-row">
+                <input type="date" id="hike-date">
+                <input type="text" id="hike-location" placeholder="산 이름">
+            </div>
+            <div id="track-toggle">
+                <button class="track-btn on" id="btn-mode-manual" onclick="setTrackMode('manual')">✋ 수동</button>
+                <button class="track-btn" id="btn-mode-realtime" onclick="setTrackMode('realtime')">📡 실시간</button>
+            </div>
+        </div>
         <button id="btn-start">🥾 산행 출발</button>
     </div>
+    <!-- 산행 중 -->
     <div id="ctrl-active">
-        <button id="btn-record">
-            📍 지점 기록
-            <span id="btn-record-label">탭하여 현재 위치 저장</span>
-        </button>
-        <button id="btn-end">
-            <span id="btn-end-icon">🏁</span>
-            종료
-        </button>
+        <span id="timer-big">00:00:00</span>
+        <button id="btn-pause" onclick="onPauseClick()">⏸ 정지</button>
+        <button id="btn-end" onclick="onEndClick()">🏁 종료</button>
     </div>
 </div>
 
-<div id="history-panel">
-    <div id="history-sheet">
-        <div id="history-sheet-handle"></div>
-        <div id="history-sheet-header">
-            <span id="history-sheet-title">보관된 산행</span>
-            <button id="btn-close-history" onclick="closeHistory()">×</button>
+<!-- 드롭다운 -->
+<div id="dropdown">
+    <button class="dd-item" onclick="ddAction('history')"><span class="dd-icon">🗂</span>보관함<span id="dd-badge"></span></button>
+    <button class="dd-item" onclick="ddAction('export')"><span class="dd-icon">📊</span>내보내기</button>
+    <button class="dd-item" id="dd-new" onclick="ddAction('new')"><span class="dd-icon">🔄</span>새 산행</button>
+</div>
+<div id="dd-bd" onclick="closeDropdown()" style="display:none;position:fixed;inset:0;z-index:599"></div>
+
+<!-- 기록 바텀시트 -->
+<div id="log-sheet-backdrop" onclick="closeLogSheet()"></div>
+<div id="log-sheet">
+    <div id="sheet-handle-area">
+        <div id="sheet-handle"></div>
+        <div id="sheet-header">
+            <span id="sheet-title">기록</span>
+            <span id="sheet-meta"></span>
+            <button id="sheet-close" onclick="closeLogSheet()">×</button>
         </div>
-        <div id="history-list"></div>
+    </div>
+    <div id="log-scroll">
+        <div id="log-empty">아직 기록이 없습니다</div>
+        <div id="logs"></div>
+    </div>
+</div>
+
+<!-- 이력 패널 -->
+<div id="history-panel" onclick="onHistoryBdClick(event)">
+    <div id="history-sheet">
+        <div id="history-handle-area">
+            <div id="history-handle"></div>
+            <div id="history-header">
+                <span id="history-title">보관된 산행</span>
+                <button id="history-close" onclick="closeHistory()">×</button>
+            </div>
+        </div>
+        <div id="history-scroll"><div id="history-list"></div></div>
     </div>
 </div>
 
 <script>
-    /* ── 지도 초기화 ── */
-    const map = L.map('map', { zoomControl: false }).setView([36.5, 127.5], 7);
-    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+/* ══ 지도 ══ */
+const map = L.map('map',{zoomControl:false}).setView([36.5,127.5],7);
+L.control.zoom({position:'bottomleft'}).addTo(map);
+const tileNormal    = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});
+const tileSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+tileNormal.addTo(map);
+let isSat = false;
 
-    const tileNormal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
-    const tileSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
-    tileNormal.addTo(map);
-    let isSatellite = false;
+window.toggleMapLayer = function(){
+    if(isSat){map.removeLayer(tileSatellite);tileNormal.addTo(map);document.getElementById('map-layer-btn').textContent='🗺';}
+    else{map.removeLayer(tileNormal);tileSatellite.addTo(map);document.getElementById('map-layer-btn').textContent='🛰';}
+    isSat=!isSat;
+};
+if(window.visualViewport) window.visualViewport.addEventListener('resize',()=>map.invalidateSize());
+function alignBody(){
+    const maxW=560,vw=window.innerWidth,o=vw>maxW?Math.floor((vw-maxW)/2):0;
+    document.body.style.left=o+'px'; document.body.style.right=o+'px';
+}
+alignBody();
+window.addEventListener('resize',()=>{alignBody();map.invalidateSize();});
 
-    window.toggleMapLayer = function() {
-        if (isSatellite) { map.removeLayer(tileSatellite); tileNormal.addTo(map); document.getElementById('map-layer-btn').textContent = '위성'; }
-        else { map.removeLayer(tileNormal); tileSatellite.addTo(map); document.getElementById('map-layer-btn').textContent = '지도'; }
-        isSatellite = !isSatellite;
-    };
+/* ══ 상태 ══ */
+let curMarker=null, locDot=null, locCircle=null;
+let routeCoords=[], rtCoords=[];
+let routeLine   = L.polyline([],{color:'#2E7D55',weight:4,opacity:0.8}).addTo(map);
+let rtLine      = L.polyline([],{color:'#E09820',weight:3,opacity:0.7,dashArray:'6 4'}).addTo(map);
+let curHike     = {date:'',location:'',logs:[]};
+let hikeHistory = [];
 
-    /* ── Android 소프트키보드 대응: 키보드가 올라오면 지도 resize ── */
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            map.invalidateSize();
-        });
+/* 타이머 */
+let timerIv=null, startTs=null, pausedMs=0, isPaused=false;
+
+/* 자동 일시정지 */
+const AUTO_MS = 30*60*1000;
+let lastMoveT=null, wasAutoPaused=false;
+
+/* 추적 */
+let trackMode='manual', watchId=null, lastWatchCoord=null, rtDist=0;
+let idleWatchId=null, idleLastCoord=null;
+let screenHidden=false;
+
+/* DOM */
+const $start    = document.getElementById('btn-start');
+const $pause    = document.getElementById('btn-pause');
+const $end      = document.getElementById('btn-end');
+const $dateInp  = document.getElementById('hike-date');
+const $locInp   = document.getElementById('hike-location');
+const $logsDiv  = document.getElementById('logs');
+const $statusDot= document.getElementById('status-dot');
+const $timerBig = document.getElementById('timer-big');
+const $ctrlIdle = document.getElementById('ctrl-idle');
+const $ctrlAct  = document.getElementById('ctrl-active');
+const $fab      = document.getElementById('fab-record');
+const $statPill = document.getElementById('stat-pill');
+
+/* ══ 모드 선택 ══ */
+window.setTrackMode = function(m){
+    if($ctrlAct.classList.contains('show')) return;
+    trackMode=m;
+    document.getElementById('btn-mode-manual').classList.toggle('on',m==='manual');
+    document.getElementById('btn-mode-realtime').classList.toggle('on',m==='realtime');
+    localStorage.setItem('hikeApp_trackMode',m);
+};
+
+/* ══ 드롭다운 ══ */
+window.toggleDropdown=function(){
+    const dd=document.getElementById('dropdown'),bd=document.getElementById('dd-bd');
+    const open=dd.classList.contains('open');
+    dd.classList.toggle('open',!open); bd.style.display=open?'none':'block';
+};
+window.closeDropdown=function(){
+    document.getElementById('dropdown').classList.remove('open');
+    document.getElementById('dd-bd').style.display='none';
+};
+window.ddAction=function(a){
+    closeDropdown();
+    if(a==='history') openHistory();
+    else if(a==='export') doExport();
+    else if(a==='new') doNewHike();
+};
+
+/* ══ 유틸 ══ */
+function nowTime(){return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});}
+function hav(la1,lo1,la2,lo2){
+    const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180;
+    const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function calcDist(logs){
+    let t=0; const pts=logs.filter(l=>l.lat&&l.lng);
+    for(let i=1;i<pts.length;i++) t+=hav(+pts[i-1].lat,+pts[i-1].lng,+pts[i].lat,+pts[i].lng);
+    return t;
+}
+function refreshStats(){
+    const dist=trackMode==='realtime'?rtDist:calcDist(curHike.logs);
+    document.getElementById('stat-dist').textContent=dist.toFixed(2);
+    document.getElementById('stat-pts').textContent=curHike.logs.length;
+    /* 기록 배지 */
+    const n=curHike.logs.length;
+    const badge=document.getElementById('log-badge');
+    badge.textContent=n; badge.style.display=n>0?'flex':'none';
+}
+function refreshHistoryBadge(){
+    const b=document.getElementById('dd-badge');
+    b.textContent=hikeHistory.length; b.style.display=hikeHistory.length>0?'flex':'none';
+}
+function save(){
+    curHike.date=$dateInp.value; curHike.location=$locInp.value;
+    localStorage.setItem('hikeApp_current',JSON.stringify(curHike));
+    if(startTs) localStorage.setItem('hikeApp_startTs',startTs.toString());
+    localStorage.setItem('hikeApp_pausedMs',pausedMs.toString());
+}
+
+/* ══ 타이머 ══ */
+function startTimer(ts,pm){
+    startTs=ts||Date.now(); pausedMs=pm||0; isPaused=false;
+    $timerBig.classList.remove('paused');
+    _tickStart();
+    document.removeEventListener('visibilitychange',onVis);
+    document.addEventListener('visibilitychange',onVis);
+}
+function _tickStart(){
+    if(timerIv) clearInterval(timerIv);
+    timerIv=setInterval(()=>{
+        const e=pausedMs+Math.floor((Date.now()-startTs)/1000);
+        $timerBig.textContent=`${String(Math.floor(e/3600)).padStart(2,'0')}:${String(Math.floor(e%3600/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;
+    },1000);
+}
+function pauseTimer(){
+    if(isPaused) return; isPaused=true;
+    pausedMs+=Math.floor((Date.now()-startTs)/1000);
+    clearInterval(timerIv); timerIv=null;
+    $timerBig.classList.add('paused'); startTs=null;
+    localStorage.setItem('hikeApp_pausedMs',pausedMs.toString());
+    localStorage.removeItem('hikeApp_startTs');
+}
+function resumeTimer(){
+    if(!isPaused) return; isPaused=false;
+    startTs=Date.now(); $timerBig.classList.remove('paused'); _tickStart();
+    localStorage.setItem('hikeApp_startTs',startTs.toString());
+}
+function stopTimer(){
+    clearInterval(timerIv); timerIv=null;
+    document.removeEventListener('visibilitychange',onVis);
+    $timerBig.textContent='00:00:00'; $timerBig.classList.remove('paused');
+    startTs=null; pausedMs=0; isPaused=false; lastMoveT=null; wasAutoPaused=false;
+    localStorage.removeItem('hikeApp_startTs'); localStorage.removeItem('hikeApp_pausedMs');
+}
+function onVis(){
+    if(document.hidden){
+        screenHidden=true;
+        if(!isPaused&&timerIv){clearInterval(timerIv);timerIv=null;}
+        /* 실시간: 화면 꺼지면 GPS 중단 */
+        if(trackMode==='realtime'&&!isPaused&&watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+    } else {
+        screenHidden=false;
+        if(!isPaused&&startTs) _tickStart();
+        if(trackMode==='realtime'&&!isPaused&&watchId===null) startWatch();
+        /* 화면 켜질 때 밀린 렌더링 */
+        renderLogsFull(); refreshStats();
+        if(trackMode==='realtime') rtLine.setLatLngs(rtCoords);
+        if(wasAutoPaused){wasAutoPaused=false;setTimeout(()=>alert('30분 이상 이동이 없어 자동 일시정지되었습니다.\n재개 버튼을 눌러 계속하세요.'),200);}
     }
+}
 
-    /* ── 데스크톱: position fixed + max-width 중앙 정렬 보완 ── */
-    function alignBody() {
-        const maxW = 560;
-        const vw = window.innerWidth;
-        if (vw > maxW) {
-            const offset = Math.floor((vw - maxW) / 2);
-            document.body.style.left  = offset + 'px';
-            document.body.style.right = offset + 'px';
-        } else {
-            document.body.style.left  = '0';
-            document.body.style.right = '0';
+/* ══ GPS 추적 ══ */
+function startWatch(){
+    if(!navigator.geolocation||watchId!==null) return;
+    watchId=navigator.geolocation.watchPosition(onWatch,e=>console.warn(e.message),{enableHighAccuracy:true,timeout:10000,maximumAge:5000});
+}
+function stopWatch(){if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}}
+function onWatch(pos){
+    const lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
+    if(!screenHidden) updateLocDot(lat,lng,acc);
+    if(isPaused) return;
+    if(lastWatchCoord){
+        const d=hav(lastWatchCoord[0],lastWatchCoord[1],lat,lng)*1000;
+        if(d<5){
+            if(lastMoveT&&Date.now()-lastMoveT>=AUTO_MS){wasAutoPaused=true;doPause();if(!screenHidden){wasAutoPaused=false;setTimeout(()=>alert('30분 이상 이동이 없어 자동 일시정지되었습니다.\n재개 버튼을 눌러 계속하세요.'),200);}}
+            return;
         }
+        rtDist+=hav(lastWatchCoord[0],lastWatchCoord[1],lat,lng);
     }
-    alignBody();
-    window.addEventListener('resize', () => { alignBody(); map.invalidateSize(); });
+    lastMoveT=Date.now(); lastWatchCoord=[lat,lng]; rtCoords.push([lat,lng]);
+    if(!screenHidden){rtLine.setLatLngs(rtCoords);refreshStats();if(!userDragged)map.setView([lat,lng],map.getZoom());}
+}
+function startIdle(){
+    if(!navigator.geolocation||idleWatchId!==null) return;
+    idleWatchId=navigator.geolocation.watchPosition(pos=>{
+        if(isPaused) return;
+        const lat=pos.coords.latitude,lng=pos.coords.longitude;
+        if(idleLastCoord){
+            const d=hav(idleLastCoord[0],idleLastCoord[1],lat,lng)*1000;
+            if(d>=5){lastMoveT=Date.now();idleLastCoord=[lat,lng];return;}
+        } else {idleLastCoord=[lat,lng];lastMoveT=Date.now();return;}
+        if(lastMoveT&&Date.now()-lastMoveT>=AUTO_MS){wasAutoPaused=true;doPause();if(!screenHidden){wasAutoPaused=false;setTimeout(()=>alert('30분 이상 이동이 없어 자동 일시정지되었습니다.\n재개 버튼을 눌러 계속하세요.'),200);}}
+    },e=>console.warn(e.message),{enableHighAccuracy:false,timeout:15000,maximumAge:60000});
+}
+function stopIdle(){if(idleWatchId!==null){navigator.geolocation.clearWatch(idleWatchId);idleWatchId=null;}idleLastCoord=null;}
 
-    /* ── 상태 ── */
-    let currentMarker = null;
-    let routeCoords = [];
-    let routeLine = L.polyline(routeCoords, { color: '#4ECDC4', weight: 4, opacity: 0.85 }).addTo(map);
-    let currentHike = { date: '', location: '', logs: [] };
-    let hikeHistory = [];
-    let timerInterval = null;
-    let startTimestamp = null;
+/* ══ 현재 위치 점 ══ */
+function updateLocDot(lat,lng,acc){
+    if(!locDot){
+        const icon=L.divIcon({className:'',html:'<div class="loc-dot"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+        locDot=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map);
+        locCircle=L.circle([lat,lng],{radius:acc,color:'#2979FF',fillColor:'#2979FF',fillOpacity:0.07,weight:1}).addTo(map);
+    } else {locDot.setLatLng([lat,lng]);locCircle.setLatLng([lat,lng]);locCircle.setRadius(acc);}
+}
+function clearLocDot(){
+    if(locDot){map.removeLayer(locDot);locDot=null;}
+    if(locCircle){map.removeLayer(locCircle);locCircle=null;}
+}
 
-    const btnStart      = document.getElementById('btn-start');
-    const btnRecord     = document.getElementById('btn-record');
-    const btnEnd        = document.getElementById('btn-end');
-    const dateInput     = document.getElementById('hike-date');
-    const locationInput = document.getElementById('hike-location');
-    const logsDiv       = document.getElementById('logs');
-    const historyCountDisplay = document.getElementById('history-count');
-    const statusDot     = document.getElementById('status-dot');
-    const statusText    = document.getElementById('status-text');
-    const timerDisplay  = document.getElementById('timer-display');
-    const ctrlIdle      = document.getElementById('ctrl-idle');
-    const ctrlActive    = document.getElementById('ctrl-active');
-    const inputsDiv     = document.getElementById('inputs');
+/* ══ 일시정지 / 재개 ══ */
+function doPause(){
+    if(isPaused) return;
+    pauseTimer();
+    if(trackMode==='realtime') stopWatch(); else stopIdle();
+    recordPoint('일시정지','','',wasAutoPaused?'자동 일시정지':'');
+    $pause.textContent='▶ 재개'; $pause.classList.add('on');
+    $statusDot.className='paused';
+    $fab.style.display='none';
+}
+function doResume(){
+    if(!isPaused) return;
+    resumeTimer(); lastMoveT=Date.now();
+    if(trackMode==='realtime') startWatch(); else {idleLastCoord=null;startIdle();}
+    recordPoint('재개','','','');
+    $pause.textContent='⏸ 정지'; $pause.classList.remove('on');
+    $statusDot.className='active';
+    $fab.classList.add('show');
+}
+function onPauseClick(){if(!isPaused)doPause();else doResume();}
 
-    /* ── 드롭다운 ── */
-    window.toggleDropdown = function() {
-        const dd = document.getElementById('dropdown');
-        const bd = document.getElementById('dropdown-backdrop');
-        const isOpen = dd.classList.contains('open');
-        if (isOpen) { dd.classList.remove('open'); bd.style.display = 'none'; }
-        else { dd.classList.add('open'); bd.style.display = 'block'; }
-    };
-    window.closeDropdown = function() {
-        document.getElementById('dropdown').classList.remove('open');
-        document.getElementById('dropdown-backdrop').style.display = 'none';
-    };
-    window.ddAction = function(action) {
-        closeDropdown();
-        if (action === 'history') openHistory();
-        else if (action === 'export') doExport();
-        else if (action === 'new') doNewHike();
-    };
+/* ══ 상태 전환 ══ */
+let userDragged=false;
+map.on('dragstart',()=>{userDragged=true;});
 
-    /* ── 유틸 ── */
-    function getCurrentTime() {
-        return new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
-    function haversineKm(lat1, lng1, lat2, lng2) {
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-    function calcTotalDist(logs) {
-        let total = 0;
-        const pts = logs.filter(l => l.lat && l.lng);
-        for (let i = 1; i < pts.length; i++)
-            total += haversineKm(parseFloat(pts[i-1].lat), parseFloat(pts[i-1].lng), parseFloat(pts[i].lat), parseFloat(pts[i].lng));
-        return total;
-    }
-    function updateMapStats() {
-        const dist = calcTotalDist(currentHike.logs);
-        document.getElementById('stat-dist').textContent = dist.toFixed(2) + 'km';
-        document.getElementById('stat-pts').textContent = currentHike.logs.length;
-        document.getElementById('log-count').textContent = currentHike.logs.length;
-    }
-    function updateHistoryCount() {
-        historyCountDisplay.innerText = `보관: ${hikeHistory.length}건`;
-        const badge = document.getElementById('dd-history-badge');
-        if (hikeHistory.length > 0) { badge.style.display = 'flex'; badge.textContent = hikeHistory.length; }
-        else { badge.style.display = 'none'; }
-    }
-    function saveCurrentState() {
-        currentHike.date = dateInput.value;
-        currentHike.location = locationInput.value;
-        localStorage.setItem('hikeApp_current', JSON.stringify(currentHike));
-        if (startTimestamp) localStorage.setItem('hikeApp_startTs', startTimestamp.toString());
-    }
+function setActive(on){
+    $statusDot.className=on?'active':'';
+    $ctrlIdle.style.display=on?'none':'flex';
+    $ctrlAct.classList.toggle('show',on);
+    $fab.classList.toggle('show',on&&!isPaused);
+    $statPill.classList.toggle('show',on);
+    document.getElementById('btn-show-logs').classList.toggle('show',on);
+    document.getElementById('btn-mode-manual').disabled=on;
+    document.getElementById('btn-mode-realtime').disabled=on;
+    document.getElementById('dd-new').style.display=(!on&&curHike.logs.length>0)?'flex':'none';
+    setTimeout(()=>map.invalidateSize(),50);
+}
 
-    /* ── 타이머 ── */
-    function startTimer(fromTs) {
-        startTimestamp = fromTs || Date.now();
-        timerDisplay.style.display = 'inline';
-        resumeTimer();
-        document.addEventListener('visibilitychange', onVisibilityChange);
-    }
-    function resumeTimer() {
-        if (timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
-            const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
-            const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
-            const s = (elapsed % 60).toString().padStart(2, '0');
-            timerDisplay.textContent = `${h}:${m}:${s}`;
-        }, 1000);
-    }
-    function onVisibilityChange() {
-        if (document.hidden) { clearInterval(timerInterval); timerInterval = null; }
-        else { if (startTimestamp) resumeTimer(); }
-    }
-    function stopTimer() {
-        clearInterval(timerInterval); timerInterval = null;
-        document.removeEventListener('visibilitychange', onVisibilityChange);
-        timerDisplay.style.display = 'none';
-        startTimestamp = null;
-        localStorage.removeItem('hikeApp_startTs');
-    }
+/* ══ 지도 마커 ══ */
+function updateMap(lat,lng){
+    if(!curMarker){curMarker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],16);userDragged=false;}
+    else{curMarker.setLatLng([lat,lng]);if(!userDragged)map.setView([lat,lng],map.getZoom());}
+    routeCoords.push([lat,lng]); routeLine.setLatLngs(routeCoords);
+}
 
-    /* ── 상태 전환 ── */
-    function setActiveState(active) {
-        statusDot.className = active ? 'active' : '';
-        statusText.textContent = active ? '산행 중' : '대기 중';
-        ctrlIdle.style.display   = active ? 'none' : 'flex';
-        ctrlActive.style.display = active ? 'flex' : 'none';
-        inputsDiv.classList.toggle('hidden', active);
-        document.getElementById('dd-new-item').style.display =
-            (!active && currentHike.logs.length > 0) ? 'flex' : 'none';
-        /* 상태 전환 후 지도 크기 재계산 */
-        setTimeout(() => map.invalidateSize(), 50);
-    }
+/* ══ 기록 ══ */
+function recordPoint(type,lat='',lng='',memo=''){
+    curHike.logs.push({id:Date.now(),type,time:nowTime(),lat,lng,memo});
+    save();
+    if(!screenHidden){prependLog(curHike.logs[curHike.logs.length-1]);refreshStats();}
+    document.getElementById('dd-new').style.display=curHike.logs.length>0?'flex':'none';
+}
+function fetchAndRecord(type,memo=''){
+    if(!navigator.geolocation) return alert('위치 정보 미지원');
+    navigator.geolocation.getCurrentPosition(
+        pos=>{
+            const lat=pos.coords.latitude.toFixed(5),lng=pos.coords.longitude.toFixed(5);
+            updateMap(parseFloat(lat),parseFloat(lng)); recordPoint(type,lat,lng,memo);
+        },
+        ()=>{alert('GPS 신호 없음. 좌표 없이 기록합니다.');recordPoint(type,'',memo);},
+        {enableHighAccuracy:true,timeout:7000,maximumAge:30000}
+    );
+}
+function onFabRecord(){
+    if(isPaused) return;
+    const memo=prompt('지점 메모 (예: 삼거리, 정상)','');
+    if(memo===null) return;
+    fetchAndRecord('기록',memo);
+}
 
-    let userMovedMap = false;
-    map.on('dragstart', () => { userMovedMap = true; });
-
-    function updateMap(lat, lng) {
-        const latlng = [lat, lng];
-        if (!currentMarker) {
-            currentMarker = L.marker(latlng).addTo(map);
-            map.setView(latlng, 16);
-            userMovedMap = false;
-        } else {
-            currentMarker.setLatLng(latlng);
-            if (!userMovedMap) map.setView(latlng, map.getZoom());
-        }
-        routeCoords.push(latlng);
-        routeLine.setLatLngs(routeCoords);
-    }
-
-    /* ── 기록 ── */
-    function recordPoint(type, lat = '', lng = '', memo = '') {
-        const logItem = { id: Date.now(), type, time: getCurrentTime(), lat, lng, memo };
-        currentHike.logs.push(logItem);
-        saveCurrentState(); renderLogs(); updateMapStats();
-    }
-    function fetchLocationAndRecord(type, memo = '') {
-        if (!navigator.geolocation) return alert('위치 정보 미지원');
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const lat = pos.coords.latitude.toFixed(5);
-                const lng = pos.coords.longitude.toFixed(5);
-                updateMap(parseFloat(lat), parseFloat(lng));
-                recordPoint(type, lat, lng, memo);
-            },
-            () => { alert('GPS 신호를 잡을 수 없습니다. 좌표 없이 기록합니다.'); recordPoint(type, '', '', memo); },
-            { enableHighAccuracy: true, timeout: 7000, maximumAge: 30000 }
-        );
-    }
-
-    /* ── 삭제 ── */
-    window.deleteLog = function(id) {
-        if (!confirm('이 지점 기록을 삭제하시겠습니까?')) return;
-        currentHike.logs = currentHike.logs.filter(l => l.id !== id);
-        routeCoords = [];
-        currentHike.logs.forEach(l => { if (l.lat && l.lng) routeCoords.push([parseFloat(l.lat), parseFloat(l.lng)]); });
-        routeLine.setLatLngs(routeCoords);
-        if (routeCoords.length > 0 && currentMarker) currentMarker.setLatLng(routeCoords[routeCoords.length-1]);
-        else if (currentMarker && routeCoords.length === 0) { map.removeLayer(currentMarker); currentMarker = null; }
-        saveCurrentState(); renderLogs(); updateMapStats();
-        document.getElementById('dd-new-item').style.display = (currentHike.logs.length > 0) ? 'flex' : 'none';
-    };
-
-    /* ── 렌더링 ── */
-    function renderLogs() {
-        const emptyEl = document.getElementById('empty-log');
-        if (currentHike.logs.length === 0) { emptyEl.classList.add('show'); logsDiv.innerHTML = ''; return; }
-        emptyEl.classList.remove('show');
-        logsDiv.innerHTML = '';
-        [...currentHike.logs].reverse().forEach(log => {
-            const el = document.createElement('div');
-            el.className = 'log-entry';
-            const memoText = log.memo ? log.memo : (log.type === '출발' ? '산행 시작' : log.type === '종료' ? '산행 종료' : '지점');
-            const coordText = (log.lat && log.lng) ? `${parseFloat(log.lat).toFixed(3)},${parseFloat(log.lng).toFixed(3)}` : '좌표없음';
-            el.innerHTML = `
-                <span class="log-type-badge badge-${log.type}">${log.type}</span>
+/* ══ 기록 렌더링 (타임라인) ══ */
+const TYPE_ICON={'출발':'🟢','기록':'🔵','일시정지':'🟡','재개':'🟢','종료':'🔴'};
+const TYPE_MEMO={'출발':'산행 시작','종료':'산행 종료','일시정지':'기록 일시정지','재개':'기록 재개'};
+function prependLog(log){
+    document.getElementById('log-empty').style.display='none';
+    const el=_makeLogEl(log);
+    $logsDiv.insertBefore(el,$logsDiv.firstChild);
+    /* 시트 메타 갱신 */
+    document.getElementById('sheet-meta').textContent=curHike.logs.length+'개';
+}
+function renderLogsFull(){
+    $logsDiv.innerHTML='';
+    const empty=document.getElementById('log-empty');
+    if(curHike.logs.length===0){empty.style.display='block';return;}
+    empty.style.display='none';
+    document.getElementById('sheet-meta').textContent=curHike.logs.length+'개';
+    [...curHike.logs].reverse().forEach(log=>$logsDiv.appendChild(_makeLogEl(log)));
+}
+function _makeLogEl(log){
+    const el=document.createElement('div'); el.className='log-entry'; el.dataset.id=log.id;
+    const memo=log.memo||(TYPE_MEMO[log.type]||'지점');
+    const coord=(log.lat&&log.lng)?`${(+log.lat).toFixed(4)}, ${(+log.lng).toFixed(4)}`:'';
+    el.innerHTML=`
+        <div class="log-dot dot-${log.type}">${TYPE_ICON[log.type]||'⚪'}</div>
+        <div class="log-body">
+            <div class="log-top">
+                <span class="log-type">${log.type}</span>
                 <span class="log-time">${log.time}</span>
-                <span class="log-memo">${memoText}</span>
-                <span class="log-coord">${coordText}</span>
-                <button class="btn-delete" onclick="deleteLog(${log.id})" aria-label="삭제">×</button>
-            `;
-            logsDiv.appendChild(el);
-        });
-    }
+            </div>
+            <div class="log-memo">${memo}</div>
+            ${coord?`<div class="log-coord">${coord}</div>`:''}
+        </div>
+        <button class="btn-del" onclick="deleteLog(${log.id})" aria-label="삭제">×</button>`;
+    return el;
+}
 
-    /* ── 이력 패널 ── */
-    function openHistory() {
-        renderHistoryList();
-        document.getElementById('history-panel').classList.add('open');
-    }
-    window.closeHistory = function() { document.getElementById('history-panel').classList.remove('open'); };
-    function renderHistoryList() {
-        const list = document.getElementById('history-list');
-        if (hikeHistory.length === 0) { list.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:30px;font-size:13px;">저장된 산행이 없습니다.</div>'; return; }
-        list.innerHTML = '';
-        [...hikeHistory].reverse().forEach((hike, ri) => {
-            const i = hikeHistory.length - 1 - ri;
-            const dist = calcTotalDist(hike.logs);
-            const startLog = hike.logs.find(l => l.type === '출발');
-            const endLog   = hike.logs.find(l => l.type === '종료');
-            const el = document.createElement('div');
-            el.className = 'history-item';
-            el.innerHTML = `
-                <div class="history-item-top">
-                    <span class="history-item-name">${hike.location || '이름없음'}</span>
-                    <div style="display:flex;align-items:center;gap:4px;">
-                        <span class="history-item-date">${hike.date}</span>
-                        <button class="btn-del-history" onclick="deleteHistory(${i},event)" aria-label="산행 삭제">×</button>
-                    </div>
+/* ══ 기록 시트 ══ */
+window.openLogSheet=function(){
+    document.getElementById('log-sheet-backdrop').classList.add('open');
+    document.getElementById('log-sheet').classList.add('open');
+};
+window.closeLogSheet=function(){
+    document.getElementById('log-sheet-backdrop').classList.remove('open');
+    document.getElementById('log-sheet').classList.remove('open');
+};
+
+/* ══ 삭제 ══ */
+window.deleteLog=function(id){
+    if(!confirm('이 기록을 삭제하시겠습니까?')) return;
+    curHike.logs=curHike.logs.filter(l=>l.id!==id);
+    routeCoords=[]; curHike.logs.forEach(l=>{if(l.lat&&l.lng)routeCoords.push([+l.lat,+l.lng]);});
+    routeLine.setLatLngs(routeCoords);
+    if(routeCoords.length>0&&curMarker) curMarker.setLatLng(routeCoords[routeCoords.length-1]);
+    else if(curMarker&&routeCoords.length===0){map.removeLayer(curMarker);curMarker=null;}
+    save(); renderLogsFull(); refreshStats();
+    document.getElementById('dd-new').style.display=curHike.logs.length>0?'flex':'none';
+};
+
+/* ══ 이력 패널 ══ */
+function openHistory(){
+    renderHistoryList();
+    document.getElementById('history-panel').classList.add('open');
+}
+window.closeHistory=function(){document.getElementById('history-panel').classList.remove('open');};
+window.onHistoryBdClick=function(e){if(e.target===document.getElementById('history-panel'))closeHistory();};
+function renderHistoryList(){
+    const list=document.getElementById('history-list');
+    if(hikeHistory.length===0){list.innerHTML='<div style="text-align:center;padding:40px;color:#6B7A8D;font-size:15px;">저장된 산행이 없습니다</div>';return;}
+    list.innerHTML='';
+    [...hikeHistory].reverse().forEach((hike,ri)=>{
+        const i=hikeHistory.length-1-ri;
+        const dist=calcDist(hike.logs);
+        const s=hike.logs.find(l=>l.type==='출발'), e=hike.logs.find(l=>l.type==='종료');
+        const el=document.createElement('div'); el.className='h-item';
+        el.innerHTML=`
+            <div class="h-item-top">
+                <span class="h-item-name">${hike.location||'이름없음'}</span>
+                <div style="display:flex;align-items:center;gap:4px">
+                    <span class="h-item-date">${hike.date}</span>
+                    <button class="btn-del-h" onclick="delHistory(${i},event)">×</button>
                 </div>
-                <div class="history-item-stats">
-                    <span class="history-item-stat">지점 <span>${hike.logs.length}개</span></span>
-                    <span class="history-item-stat">거리 <span>${dist.toFixed(2)}km</span></span>
-                    ${startLog ? `<span class="history-item-stat">출발 <span>${startLog.time}</span></span>` : ''}
-                    ${endLog   ? `<span class="history-item-stat">종료 <span>${endLog.time}</span></span>` : ''}
-                </div>
-            `;
-            list.appendChild(el);
+            </div>
+            <div class="h-item-stats">
+                <span class="h-item-stat">지점 <b>${hike.logs.length}개</b></span>
+                <span class="h-item-stat">거리 <b>${dist.toFixed(2)}km</b></span>
+                ${s?`<span class="h-item-stat">출발 <b>${s.time}</b></span>`:''}
+                ${e?`<span class="h-item-stat">종료 <b>${e.time}</b></span>`:''}
+            </div>`;
+        list.appendChild(el);
+    });
+}
+window.delHistory=function(i,e){
+    e.stopPropagation();
+    if(!confirm('이 기록을 영구 삭제하시겠습니까?')) return;
+    hikeHistory.splice(i,1);
+    localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
+    refreshHistoryBadge(); renderHistoryList();
+};
+
+/* ══ 내보내기 ══ */
+function doExport(){
+    const all=[...hikeHistory]; if(curHike.logs.length>0) all.push(curHike);
+    if(all.length===0) return alert('데이터가 없습니다.');
+    let csv='\uFEFF구분,일자,장소,시간,메모,위도,경도,거리누적km\n';
+    all.forEach(hike=>{
+        let cum=0;
+        hike.logs.forEach((log,i)=>{
+            if(i>0&&log.lat&&log.lng){const prev=hike.logs.slice(0,i).reverse().find(l=>l.lat&&l.lng);if(prev)cum+=hav(+prev.lat,+prev.lng,+log.lat,+log.lng);}
+            csv+=`${log.type},${hike.date},${hike.location||'미입력'},${log.time},${log.memo||''},${log.lat||''},${log.lng||''},${cum.toFixed(3)}\n`;
         });
-    }
-    window.deleteHistory = function(i, e) {
-        e.stopPropagation();
-        if (!confirm('이 기록을 영구 삭제하시겠습니까?')) return;
-        hikeHistory.splice(i, 1);
-        localStorage.setItem('hikeApp_history', JSON.stringify(hikeHistory));
-        updateHistoryCount(); renderHistoryList();
-    };
+    });
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    a.download=`산행기록_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
 
-    /* ── 내보내기 ── */
-    function doExport() {
-        const allData = [...hikeHistory];
-        if (currentHike.logs.length > 0) allData.push(currentHike);
-        if (allData.length === 0) return alert('데이터가 없습니다.');
-        let csv = '\uFEFF구분,일자,장소,시간,메모,위도,경도,거리누적km\n';
-        allData.forEach(hike => {
-            let cumDist = 0;
-            hike.logs.forEach((log, i) => {
-                if (i > 0 && log.lat && log.lng) {
-                    const prev = hike.logs.slice(0, i).reverse().find(l => l.lat && l.lng);
-                    if (prev) cumDist += haversineKm(parseFloat(prev.lat), parseFloat(prev.lng), parseFloat(log.lat), parseFloat(log.lng));
-                }
-                csv += `${log.type},${hike.date},${hike.location||'미입력'},${log.time},${log.memo||''},${log.lat||''},${log.lng||''},${cumDist.toFixed(3)}\n`;
-            });
-        });
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = `등산기록_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-    }
+/* ══ 리셋 ══ */
+function resetHike(){
+    stopWatch(); stopIdle(); clearLocDot();
+    routeCoords=[]; rtCoords=[]; rtDist=0; lastWatchCoord=null; idleLastCoord=null;
+    routeLine.setLatLngs([]);
+    map.removeLayer(rtLine);
+    rtLine=L.polyline([],{color:'#E09820',weight:3,opacity:0.7,dashArray:'6 4'}).addTo(map);
+    if(curMarker){map.removeLayer(curMarker);curMarker=null;}
+}
 
-    /* ── 새 산행 ── */
-    function doNewHike() {
-        if (currentHike.logs.length === 0) return alert('저장할 기록이 없습니다.');
-        if (!confirm('현재 기록을 보관함에 넣고 새 산행을 시작합니까?')) return;
-        hikeHistory.push(JSON.parse(JSON.stringify(currentHike)));
-        localStorage.setItem('hikeApp_history', JSON.stringify(hikeHistory));
-        updateHistoryCount();
-        currentHike = { date: dateInput.value, location: '', logs: [] };
-        localStorage.removeItem('hikeApp_current');
-        locationInput.value = '';
-        routeCoords = []; routeLine.setLatLngs([]);
-        if (currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
-        stopTimer(); setActiveState(false); renderLogs(); updateMapStats();
-    }
+/* ══ 새 산행 ══ */
+function doNewHike(){
+    if(curHike.logs.length===0) return alert('저장할 기록이 없습니다.');
+    if(!confirm('현재 기록을 보관함에 저장하고 새 산행을 시작합니까?')) return;
+    hikeHistory.push(JSON.parse(JSON.stringify(curHike)));
+    localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
+    refreshHistoryBadge();
+    curHike={date:$dateInp.value,location:'',logs:[]};
+    localStorage.removeItem('hikeApp_current'); $locInp.value='';
+    resetHike(); stopTimer(); setActive(false);
+    $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block';
+    refreshStats(); closeLogSheet();
+}
 
-    /* ── 버튼 이벤트 ── */
-    btnStart.addEventListener('click', () => {
-        if (currentHike.logs.length > 0) {
-            if (!confirm('이전 기록이 있습니다. 보관함에 저장하고 새 산행을 시작합니까?')) return;
-            hikeHistory.push(JSON.parse(JSON.stringify(currentHike)));
-            localStorage.setItem('hikeApp_history', JSON.stringify(hikeHistory));
-            updateHistoryCount();
-            currentHike = { date: dateInput.value, location: '', logs: [] };
-            localStorage.removeItem('hikeApp_current');
-            locationInput.value = '';
-            routeCoords = []; routeLine.setLatLngs([]);
-            if (currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
-            renderLogs(); updateMapStats();
+/* ══ 버튼 이벤트 ══ */
+$start.addEventListener('click',()=>{
+    if(curHike.logs.length>0){
+        if(!confirm('이전 기록이 있습니다. 보관함에 저장하고 새로 시작합니까?')) return;
+        hikeHistory.push(JSON.parse(JSON.stringify(curHike)));
+        localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
+        refreshHistoryBadge();
+        curHike={date:$dateInp.value,location:'',logs:[]};
+        localStorage.removeItem('hikeApp_current'); $locInp.value='';
+        resetHike(); $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block'; refreshStats();
+    }
+    setActive(true); startTimer(); lastMoveT=Date.now();
+    if(trackMode==='realtime') startWatch(); else startIdle();
+    fetchAndRecord('출발');
+});
+
+function onEndClick(){
+    if(!confirm('산행을 종료하시겠습니까?')) return;
+    $end.style.pointerEvents='none'; $pause.style.pointerEvents='none';
+    wasAutoPaused=false; if(isPaused) isPaused=false;
+    stopWatch(); stopIdle();
+    navigator.geolocation.getCurrentPosition(
+        pos=>{
+            updateMap(parseFloat(pos.coords.latitude.toFixed(5)),parseFloat(pos.coords.longitude.toFixed(5)));
+            recordPoint('종료',pos.coords.latitude.toFixed(5),pos.coords.longitude.toFixed(5),'');
+            _finishEnd();
+        },
+        ()=>{alert('GPS 없음. 좌표 없이 기록합니다.');recordPoint('종료','','','');_finishEnd();},
+        {enableHighAccuracy:true,timeout:7000,maximumAge:30000}
+    );
+}
+function _finishEnd(){
+    clearLocDot(); setActive(false); stopTimer();
+    $end.style.pointerEvents=''; $pause.style.pointerEvents='';
+    $pause.textContent='⏸ 정지'; $pause.classList.remove('on');
+    renderLogsFull(); refreshStats();
+}
+
+[$dateInp,$locInp].forEach(el=>el.addEventListener('input',save));
+
+/* ══ 초기화 ══ */
+window.onload=()=>{
+    $dateInp.value=new Date().toISOString().split('T')[0];
+    const savedMode=localStorage.getItem('hikeApp_trackMode')||'manual';
+    setTrackMode(savedMode);
+    const sh=localStorage.getItem('hikeApp_history');
+    if(sh) hikeHistory=JSON.parse(sh);
+    refreshHistoryBadge();
+    const sc=localStorage.getItem('hikeApp_current');
+    if(sc){
+        curHike=JSON.parse(sc);
+        if(curHike.date) $dateInp.value=curHike.date;
+        $locInp.value=curHike.location||'';
+        curHike.logs.forEach(l=>{if(l.lat&&l.lng) routeCoords.push([+l.lat,+l.lng]);});
+        if(routeCoords.length>0){
+            map.setView(routeCoords[routeCoords.length-1],16);
+            curMarker=L.marker(routeCoords[routeCoords.length-1]).addTo(map);
+            routeLine.setLatLngs(routeCoords);
         }
-        setActiveState(true);
-        startTimer();
-        fetchLocationAndRecord('출발');
-    });
-
-    btnRecord.addEventListener('click', () => {
-        const memo = prompt('지점 이름 또는 메모 (예: 삼거리, 대청봉):', '');
-        if (memo === null) return;
-        fetchLocationAndRecord('기록', memo);
-    });
-
-    btnEnd.addEventListener('click', () => {
-        if (!confirm('산행을 종료하시겠습니까?')) return;
-        btnEnd.disabled = true; btnRecord.disabled = true;
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const lat = pos.coords.latitude.toFixed(5);
-                const lng = pos.coords.longitude.toFixed(5);
-                updateMap(parseFloat(lat), parseFloat(lng));
-                recordPoint('종료', lat, lng, '');
-                setActiveState(false); stopTimer();
-                btnEnd.disabled = false; btnRecord.disabled = false;
-            },
-            () => {
-                alert('GPS 신호를 잡을 수 없습니다. 좌표 없이 기록합니다.');
-                recordPoint('종료', '', '', '');
-                setActiveState(false); stopTimer();
-                btnEnd.disabled = false; btnRecord.disabled = false;
-            },
-            { enableHighAccuracy: true, timeout: 7000, maximumAge: 30000 }
-        );
-    });
-
-    document.getElementById('history-panel').addEventListener('click', (e) => {
-        if (e.target === document.getElementById('history-panel')) closeHistory();
-    });
-    [dateInput, locationInput].forEach(el => el.addEventListener('input', saveCurrentState));
-
-    /* ── 초기화 ── */
-    window.onload = () => {
-        dateInput.value = new Date().toISOString().split('T')[0];
-        const savedHistory = localStorage.getItem('hikeApp_history');
-        if (savedHistory) hikeHistory = JSON.parse(savedHistory);
-        updateHistoryCount();
-        const savedCurrent = localStorage.getItem('hikeApp_current');
-        if (savedCurrent) {
-            currentHike = JSON.parse(savedCurrent);
-            if (currentHike.date) dateInput.value = currentHike.date;
-            locationInput.value = currentHike.location || '';
-            currentHike.logs.forEach(log => {
-                if (log.lat && log.lng) routeCoords.push([parseFloat(log.lat), parseFloat(log.lng)]);
-            });
-            if (routeCoords.length > 0) {
-                map.setView(routeCoords[routeCoords.length-1], 16);
-                currentMarker = L.marker(routeCoords[routeCoords.length-1]).addTo(map);
-                routeLine.setLatLngs(routeCoords);
-            }
-            renderLogs(); updateMapStats();
-            const lastLog = currentHike.logs[currentHike.logs.length - 1];
-            if (lastLog && lastLog.type !== '종료') {
-                setActiveState(true);
-                const savedTs = localStorage.getItem('hikeApp_startTs');
-                startTimer(savedTs ? parseInt(savedTs) : Date.now());
+        renderLogsFull(); refreshStats();
+        const last=curHike.logs[curHike.logs.length-1];
+        if(last&&last.type!=='종료'){
+            setActive(true);
+            const sTs=localStorage.getItem('hikeApp_startTs');
+            const sPm=parseInt(localStorage.getItem('hikeApp_pausedMs')||'0');
+            if(last.type==='일시정지'){
+                pausedMs=sPm; isPaused=true; startTs=null;
+                $timerBig.classList.add('paused');
+                const e=sPm; $timerBig.textContent=`${String(Math.floor(e/3600)).padStart(2,'0')}:${String(Math.floor(e%3600/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;
+                $statusDot.className='paused';
+                $pause.textContent='▶ 재개'; $pause.classList.add('on');
+                $fab.classList.remove('show');
+                document.removeEventListener('visibilitychange',onVis);
+                document.addEventListener('visibilitychange',onVis);
             } else {
-                setActiveState(false);
+                startTimer(sTs?parseInt(sTs):Date.now(),sPm);
+                lastMoveT=Date.now();
+                if(trackMode==='realtime') startWatch(); else startIdle();
             }
-        } else {
-            setActiveState(false);
-            navigator.geolocation && navigator.geolocation.getCurrentPosition(
-                pos => map.setView([pos.coords.latitude, pos.coords.longitude], 15),
-                () => {}, { enableHighAccuracy: false }
-            );
-        }
-        updateMapStats();
-    };
+        } else setActive(false);
+    } else {
+        setActive(false);
+        navigator.geolocation&&navigator.geolocation.getCurrentPosition(
+            pos=>map.setView([pos.coords.latitude,pos.coords.longitude],15),
+            ()=>{},{enableHighAccuracy:false}
+        );
+    }
+    refreshStats();
+};
 </script>
 </body>
 </html>

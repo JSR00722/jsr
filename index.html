@@ -118,20 +118,25 @@ body {
 #input-area input {
     flex:1; padding:10px 12px; background:rgba(0,0,0,0.04);
     border:1px solid var(--border); border-radius:11px;
-    color:var(--text); font-size:15px; -webkit-appearance:none; appearance:none;
+    color:var(--text); font-size:16px; -webkit-appearance:none; appearance:none;
     outline:none; transition:border-color 0.15s;
 }
 #input-area input:focus { border-color:var(--green-light); }
 #hike-date::-webkit-calendar-picker-indicator { opacity:0.5; cursor:pointer; }
 /* 추적 모드 토글 */
 #track-toggle {
-    display:flex; background:rgba(0,0,0,0.05); border-radius:10px; overflow:hidden;
+    display:flex; background:rgba(0,0,0,0.07); border-radius:12px;
+    padding:3px; gap:3px;
 }
 .track-btn {
-    flex:1; padding:8px 0; font-size:13px; font-weight:600; color:var(--text-dim);
-    border:none; background:none; cursor:pointer; transition:all 0.15s;
+    flex:1; padding:9px 0; font-size:14px; font-weight:600; color:var(--text-dim);
+    border:none; background:none; cursor:pointer; transition:all 0.2s; border-radius:9px;
+    letter-spacing:-0.2px;
 }
-.track-btn.on { background:white; color:var(--green); border-radius:9px; box-shadow:0 1px 6px rgba(0,0,0,0.1); }
+.track-btn.on {
+    background:white; color:var(--green); font-weight:800;
+    box-shadow:0 2px 10px rgba(0,0,0,0.13);
+}
 .track-btn:disabled { opacity:0.4; pointer-events:none; }
 
 #btn-start {
@@ -348,7 +353,6 @@ body {
 }
 @media (max-height:500px) and (orientation:landscape) {
     #fab-record { bottom:calc(var(--sab) + 76px); width:60px; height:60px; }
-    #fab-record-icon { font-size:22px; }
     #fab-record-lbl { display:none; }
     #ctrl-active { padding:8px 10px; }
     #timer-big { font-size:18px; }
@@ -357,6 +361,18 @@ body {
     #map-layer-btn { bottom:calc(var(--sab) + 72px); }
     #btn-show-logs { bottom:calc(var(--sab) + 118px); }
 }
+
+/* ══ CSS SVG 아이콘 공통 ══ */
+.ico { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ico svg { display:block; }
+.dd-icon { width:20px; height:20px; }
+.track-btn .ico { width:16px; height:16px; margin-right:5px; }
+#map-layer-btn .ico, #btn-show-logs .ico { width:20px; height:20px; }
+#fab-record .ico { width:28px; height:28px; }
+#btn-start .ico  { width:20px; height:20px; margin-right:7px; }
+#btn-pause .ico  { width:15px; height:15px; margin-right:5px; }
+#btn-end   .ico  { width:15px; height:15px; margin-right:5px; }
+.icon-btn .ico   { width:18px; height:18px; }
 </style>
 </head>
 <body>
@@ -384,20 +400,24 @@ body {
         </div>
     </div>
     <div id="hud-right">
-        <div class="icon-btn" onclick="toggleDropdown()">···</div>
+        <div class="icon-btn" onclick="toggleDropdown()">
+            <span class="ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="4"  r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="9"  r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1" fill="currentColor" stroke="none"/></svg></span>
+        </div>
     </div>
 </div>
 
 <!-- 지도 위 레이어/기록 버튼 -->
-<button id="map-layer-btn" onclick="toggleMapLayer()">🗺</button>
+<button id="map-layer-btn" onclick="toggleMapLayer()">
+    <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>
+</button>
 <div id="btn-show-logs" onclick="openLogSheet()">
-    📋
+    <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="6"  x2="16" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="12" y2="14"/></svg></span>
     <div id="log-badge" style="display:none"></div>
 </div>
 
 <!-- 중앙 FAB -->
 <div id="fab-record" onclick="onFabRecord()">
-    <span id="fab-record-icon">📍</span>
+    <span class="ico"><svg viewBox="0 0 28 28" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4 C9.6 4 6 7.6 6 12 C6 18 14 24 14 24 C14 24 22 18 22 12 C22 7.6 18.4 4 14 4Z" fill="rgba(255,255,255,0.25)"/><circle cx="14" cy="12" r="3" fill="white" stroke="none"/></svg></span>
     <span id="fab-record-lbl">기록</span>
 </div>
 
@@ -411,25 +431,55 @@ body {
                 <input type="text" id="hike-location" placeholder="산 이름">
             </div>
             <div id="track-toggle">
-                <button class="track-btn on" id="btn-mode-manual" onclick="setTrackMode('manual')">✋ 수동</button>
-                <button class="track-btn" id="btn-mode-realtime" onclick="setTrackMode('realtime')">📡 실시간</button>
+                <button class="track-btn on" id="btn-mode-manual" onclick="setTrackModeWithCheck('manual')">
+                    <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2 C8 2 8 2 8 2 L8 2 C6.9 2 6 2.9 6 4 L6 9 L4.5 9 C3.7 9 3 9.7 3 10.5 L3 11 C3 13.2 4.8 15 7 15 L9 15 C11.2 15 13 13.2 13 11 L13 6 C13 5.1 12.3 4.4 11.4 4.5 L11 4.5 L11 4 C11 2.9 10.1 2 9 2 Z"/><line x1="6" y1="6" x2="6" y2="9"/><line x1="8" y1="5" x2="8" y2="9"/><line x1="11" y1="6" x2="11" y2="9"/></svg></span>
+                    수동
+                </button>
+                <button class="track-btn" id="btn-mode-realtime" onclick="setTrackModeWithCheck('realtime')">
+                    <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="2" fill="currentColor" stroke="none"/><path d="M4.2 11.8 C2.8 10.4 2 8.5 2 8 C2 6 3.6 4.2 4.2 4.2"/><path d="M11.8 4.2 C13.2 5.6 14 7.2 14 8 C14 10 12.4 11.8 11.8 11.8"/><path d="M2.6 13.4 C0.9 11.7 0 10 0 8 C0 5 2 2.6 2.6 2.6" opacity="0.45"/><path d="M13.4 2.6 C15.1 4.3 16 6 16 8 C16 11 14 13.4 13.4 13.4" opacity="0.45"/></svg></span>
+                    실시간
+                </button>
             </div>
         </div>
-        <button id="btn-start">🥾 산행 출발</button>
+        <button id="btn-start">
+            <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16 L7 10 L10 13 L13 8 L17 4"/><circle cx="17" cy="4" r="1.5" fill="white" stroke="none"/><line x1="3" y1="16" x2="17" y2="16" opacity="0.5"/></svg></span>
+            산행 출발
+        </button>
     </div>
     <!-- 산행 중 -->
     <div id="ctrl-active">
         <span id="timer-big">00:00:00</span>
-        <button id="btn-pause" onclick="onPauseClick()">⏸ 정지</button>
-        <button id="btn-end" onclick="onEndClick()">🏁 종료</button>
+        <button id="btn-pause" onclick="onPauseClick()">
+            <span class="ico" id="pause-ico">
+                <svg viewBox="0 0 15 15" fill="currentColor"><rect x="2.5" y="2" width="3.5" height="11" rx="1"/><rect x="9"   y="2" width="3.5" height="11" rx="1"/></svg>
+            </span>
+            <span id="pause-lbl">정지</span>
+        </button>
+        <button id="btn-end" onclick="onEndClick()">
+            <span class="ico"><svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,8 6,12 13,4"/></svg></span>
+            종료
+        </button>
     </div>
 </div>
 
 <!-- 드롭다운 -->
 <div id="dropdown">
-    <button class="dd-item" onclick="ddAction('history')"><span class="dd-icon">🗂</span>보관함<span id="dd-badge"></span></button>
-    <button class="dd-item" onclick="ddAction('export')"><span class="dd-icon">📊</span>내보내기</button>
-    <button class="dd-item" id="dd-new" onclick="ddAction('new')"><span class="dd-icon">🔄</span>새 산행</button>
+    <button class="dd-item" onclick="ddAction('history')">
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="3" rx="1"/><path d="M3 7 L3 16 C3 16.6 3.4 17 4 17 L16 17 C16.6 17 17 16.6 17 16 L17 7"/><path d="M8 11 L12 11"/></svg></span>
+        보관함<span id="dd-badge"></span>
+    </button>
+    <button class="dd-item" onclick="ddAction('stats')">
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="3" height="6" rx="1"/><rect x="8.5" y="7" width="3" height="11" rx="1"/><rect x="15" y="3" width="3" height="15" rx="1"/></svg></span>
+        통계
+    </button>
+    <button class="dd-item" onclick="ddAction('export')">
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 L10 13"/><polyline points="6,7 10,3 14,7"/><path d="M4 14 L4 16 C4 16.6 4.4 17 5 17 L15 17 C15.6 17 16 16.6 16 16 L16 14"/></svg></span>
+        내보내기
+    </button>
+    <button class="dd-item" id="dd-new" onclick="ddAction('new')">
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10 A6 6 0 1 1 10 4"/><polyline points="10,2 10,5.5 13.5,5.5"/></svg></span>
+        새 산행
+    </button>
 </div>
 <div id="dd-bd" onclick="closeDropdown()" style="display:none;position:fixed;inset:0;z-index:599"></div>
 
@@ -447,6 +497,42 @@ body {
     <div id="log-scroll">
         <div id="log-empty">아직 기록이 없습니다</div>
         <div id="logs"></div>
+    </div>
+</div>
+
+<!-- ══ 한계 안내 모달 ══ -->
+<div id="limit-modal" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
+    <div id="limit-sheet" style="width:100%;max-width:560px;background:#FAFBFA;border-radius:22px 22px 0 0;padding:20px 20px calc(var(--sab,0px) + 20px);box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
+        <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 18px;"></div>
+        <div id="limit-icon" style="font-size:32px;text-align:center;margin-bottom:10px;"></div>
+        <div id="limit-title" style="font-size:17px;font-weight:800;color:#1A2332;text-align:center;margin-bottom:6px;"></div>
+        <div id="limit-body" style="font-size:14px;color:#4A5568;line-height:1.7;margin-bottom:20px;"></div>
+        <div id="limit-items" style="background:rgba(0,0,0,0.04);border-radius:14px;padding:14px 16px;margin-bottom:18px;display:none;"></div>
+        <button id="limit-ok" style="width:100%;padding:14px;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;transition:filter 0.15s;">확인했습니다</button>
+    </div>
+</div>
+
+<!-- 산행 종료 요약 모달 -->
+<div id="summary-modal" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.5);align-items:flex-end;">
+    <div id="summary-sheet" style="width:100%;max-width:560px;margin:0 auto;background:#F5F7F5;border-radius:22px 22px 0 0;padding:20px 20px calc(var(--sab,0px) + 20px);">
+        <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 16px;"></div>
+        <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:14px;">🏔 산행 완료</div>
+        <div id="summary-content"></div>
+        <button onclick="closeSummary()" style="width:100%;margin-top:16px;padding:14px;background:var(--green);color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">확인</button>
+    </div>
+</div>
+
+<!-- 통계 패널 -->
+<div id="stats-panel" style="display:none;position:fixed;inset:0;z-index:700;background:#F0F4F0;flex-direction:column;overflow:hidden;">
+    <div style="padding:calc(var(--sat,0px) + 14px) 16px 12px;background:white;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <button onclick="closeStats()" style="width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.06);border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text);">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="11,4 6,9 11,14"/></svg>
+        </button>
+        <span style="font-size:17px;font-weight:800;color:var(--text);">통계</span>
+        <span id="stats-range" style="font-size:12px;color:var(--text-dim);margin-left:auto;"></span>
+    </div>
+    <div id="stats-scroll" style="overflow-y:auto;flex:1;padding:16px;scrollbar-width:none;">
+        <div id="stats-content"></div>
     </div>
 </div>
 
@@ -473,9 +559,13 @@ const tileSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/s
 tileNormal.addTo(map);
 let isSat = false;
 
+const MAP_ICO = `<span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>`;
+const SAT_ICO = `<span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="7" height="7" rx="1" transform="rotate(-45 5.5 12.5)"/><line x1="11" y1="5" x2="15" y2="9"/><path d="M12 3 C14 3 17 6 17 8"/><path d="M14 1 C17 1 19 4 19 7" opacity="0.5"/></svg></span>`;
+
 window.toggleMapLayer = function(){
-    if(isSat){map.removeLayer(tileSatellite);tileNormal.addTo(map);document.getElementById('map-layer-btn').textContent='🗺';}
-    else{map.removeLayer(tileNormal);tileSatellite.addTo(map);document.getElementById('map-layer-btn').textContent='🛰';}
+    const btn = document.getElementById('map-layer-btn');
+    if(isSat){map.removeLayer(tileSatellite);tileNormal.addTo(map);btn.innerHTML=MAP_ICO;}
+    else{map.removeLayer(tileNormal);tileSatellite.addTo(map);btn.innerHTML=SAT_ICO;}
     isSat=!isSat;
 };
 if(window.visualViewport) window.visualViewport.addEventListener('resize',()=>map.invalidateSize());
@@ -542,6 +632,7 @@ window.closeDropdown=function(){
 window.ddAction=function(a){
     closeDropdown();
     if(a==='history') openHistory();
+    else if(a==='stats') openStatsWithCheck();
     else if(a==='export') doExport();
     else if(a==='new') doNewHike();
 };
@@ -616,14 +707,23 @@ function stopTimer(){
 function onVis(){
     if(document.hidden){
         screenHidden=true;
+        /* 타이머 tick 중단 (startTs 유지로 정확도 보존) */
         if(!isPaused&&timerIv){clearInterval(timerIv);timerIv=null;}
-        /* 실시간: 화면 꺼지면 GPS 중단 */
-        if(trackMode==='realtime'&&!isPaused&&watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+        /* 실시간: 화면 꺼지면 고정밀 → 저전력 GPS로 교체 (경로 연속성 유지) */
+        if(trackMode==='realtime'&&!isPaused&&watchId!==null){
+            navigator.geolocation.clearWatch(watchId); watchId=null;
+            startWatchLow();
+        }
     } else {
         screenHidden=false;
+        /* 타이머 재개 */
         if(!isPaused&&startTs) _tickStart();
-        if(trackMode==='realtime'&&!isPaused&&watchId===null) startWatch();
-        /* 화면 켜질 때 밀린 렌더링 */
+        /* 실시간: 화면 켜지면 저전력 → 고정밀 GPS로 복귀 */
+        if(trackMode==='realtime'&&!isPaused){
+            if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
+            startWatch();
+        }
+        /* 밀린 렌더링 일괄 처리 */
         renderLogsFull(); refreshStats();
         if(trackMode==='realtime') rtLine.setLatLngs(rtCoords);
         if(wasAutoPaused){wasAutoPaused=false;setTimeout(()=>alert('30분 이상 이동이 없어 자동 일시정지되었습니다.\n재개 버튼을 눌러 계속하세요.'),200);}
@@ -631,13 +731,30 @@ function onVis(){
 }
 
 /* ══ GPS 추적 ══ */
+/* 고정밀 — 화면 켜진 상태 */
 function startWatch(){
     if(!navigator.geolocation||watchId!==null) return;
-    watchId=navigator.geolocation.watchPosition(onWatch,e=>console.warn(e.message),{enableHighAccuracy:true,timeout:10000,maximumAge:5000});
+    watchId=navigator.geolocation.watchPosition(
+        onWatch, e=>console.warn(e.message),
+        {enableHighAccuracy:true, timeout:10000, maximumAge:5000}
+    );
+}
+/* 저전력 — 화면 꺼진 상태 (경로 연속성 유지용) */
+function startWatchLow(){
+    if(!navigator.geolocation||watchId!==null) return;
+    watchId=navigator.geolocation.watchPosition(
+        onWatch, e=>console.warn(e.message),
+        {enableHighAccuracy:false, timeout:20000, maximumAge:30000}
+    );
 }
 function stopWatch(){if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}}
+/* 실시간 좌표 30초 샘플링 저장 */
+let lastSaveCoordT = 0;
+let savedRtCoords  = [];   // {la,lo,alt,t} 배열 — localStorage 저장용
+
 function onWatch(pos){
-    const lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
+    const lat=pos.coords.latitude, lng=pos.coords.longitude, acc=pos.coords.accuracy;
+    const alt=pos.coords.altitude;  // null 가능
     if(!screenHidden) updateLocDot(lat,lng,acc);
     if(isPaused) return;
     if(lastWatchCoord){
@@ -649,6 +766,19 @@ function onWatch(pos){
         rtDist+=hav(lastWatchCoord[0],lastWatchCoord[1],lat,lng);
     }
     lastMoveT=Date.now(); lastWatchCoord=[lat,lng]; rtCoords.push([lat,lng]);
+
+    /* 30초 간격 샘플링 저장 (localStorage 용량 절약) */
+    const now=Date.now();
+    if(now-lastSaveCoordT>=30000){
+        lastSaveCoordT=now;
+        savedRtCoords.push({la:+lat.toFixed(5),lo:+lng.toFixed(5),alt:alt?+alt.toFixed(1):null,t:now});
+        /* 압축: 300개 초과 시 구형 데이터 간격 넓히기 (매 2번째만 유지) */
+        if(savedRtCoords.length>300){
+            savedRtCoords=[savedRtCoords[0],...savedRtCoords.filter((_,i)=>i>0&&i%2===0)];
+        }
+        _saveRtCoords();
+    }
+
     if(!screenHidden){rtLine.setLatLngs(rtCoords);refreshStats();if(!userDragged)map.setView([lat,lng],map.getZoom());}
 }
 function startIdle(){
@@ -679,21 +809,28 @@ function clearLocDot(){
 }
 
 /* ══ 일시정지 / 재개 ══ */
+const PAUSE_SVG  = `<svg viewBox="0 0 15 15" fill="currentColor"><rect x="2.5" y="2" width="3.5" height="11" rx="1"/><rect x="9" y="2" width="3.5" height="11" rx="1"/></svg>`;
+const RESUME_SVG = `<svg viewBox="0 0 15 15" fill="currentColor"><polygon points="3,2 13,7.5 3,13"/></svg>`;
+
 function doPause(){
     if(isPaused) return;
     pauseTimer();
     if(trackMode==='realtime') stopWatch(); else stopIdle();
     recordPoint('일시정지','','',wasAutoPaused?'자동 일시정지':'');
-    $pause.textContent='▶ 재개'; $pause.classList.add('on');
+    document.getElementById('pause-ico').innerHTML = RESUME_SVG;
+    document.getElementById('pause-lbl').textContent = '재개';
+    $pause.classList.add('on');
     $statusDot.className='paused';
-    $fab.style.display='none';
+    $fab.classList.remove('show');
 }
 function doResume(){
     if(!isPaused) return;
     resumeTimer(); lastMoveT=Date.now();
     if(trackMode==='realtime') startWatch(); else {idleLastCoord=null;startIdle();}
     recordPoint('재개','','','');
-    $pause.textContent='⏸ 정지'; $pause.classList.remove('on');
+    document.getElementById('pause-ico').innerHTML = PAUSE_SVG;
+    document.getElementById('pause-lbl').textContent = '정지';
+    $pause.classList.remove('on');
     $statusDot.className='active';
     $fab.classList.add('show');
 }
@@ -737,7 +874,7 @@ function fetchAndRecord(type,memo=''){
             const lat=pos.coords.latitude.toFixed(5),lng=pos.coords.longitude.toFixed(5);
             updateMap(parseFloat(lat),parseFloat(lng)); recordPoint(type,lat,lng,memo);
         },
-        ()=>{alert('GPS 신호 없음. 좌표 없이 기록합니다.');recordPoint(type,'',memo);},
+        ()=>{alert('GPS 신호 없음. 좌표 없이 기록합니다.');recordPoint(type,'','',memo);},
         {enableHighAccuracy:true,timeout:7000,maximumAge:30000}
     );
 }
@@ -868,6 +1005,8 @@ function doExport(){
 function resetHike(){
     stopWatch(); stopIdle(); clearLocDot();
     routeCoords=[]; rtCoords=[]; rtDist=0; lastWatchCoord=null; idleLastCoord=null;
+    savedRtCoords=[]; lastSaveCoordT=0;
+    localStorage.removeItem('hikeApp_rtCoords');
     routeLine.setLatLngs([]);
     map.removeLayer(rtLine);
     rtLine=L.polyline([],{color:'#E09820',weight:3,opacity:0.7,dashArray:'6 4'}).addTo(map);
@@ -922,15 +1061,459 @@ function onEndClick(){
 function _finishEnd(){
     clearLocDot(); setActive(false); stopTimer();
     $end.style.pointerEvents=''; $pause.style.pointerEvents='';
-    $pause.textContent='⏸ 정지'; $pause.classList.remove('on');
+    document.getElementById('pause-ico').innerHTML = PAUSE_SVG;
+    document.getElementById('pause-lbl').textContent = '정지';
+    $pause.classList.remove('on');
     renderLogsFull(); refreshStats();
+    /* 실시간 좌표를 현재 산행에 첨부 후 저장 */
+    if(trackMode==='realtime'&&savedRtCoords.length>0){
+        curHike.rtCoords=savedRtCoords.slice();
+    }
+    showSummary(curHike);
+}
+
+/* ══ 좌표 저장 헬퍼 ══ */
+function _saveRtCoords(){
+    try { localStorage.setItem('hikeApp_rtCoords',JSON.stringify(savedRtCoords)); }
+    catch(e){ console.warn('rtCoords 저장 실패(용량 초과?)',e); }
+}
+
+/* ══ 산행 요약 모달 ══ */
+function showSummary(hike){
+    const modal=document.getElementById('summary-modal');
+    modal.style.display='flex';
+    const st=hike.logs.find(l=>l.type==='출발');
+    const en=hike.logs.find(l=>l.type==='종료');
+    const pauses=hike.logs.filter(l=>l.type==='일시정지');
+    const resumes=hike.logs.filter(l=>l.type==='재개');
+
+    /* 시간 파싱 HH:MM → 분 */
+    function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
+    const totalMin = (st&&en)?toMin(en.time)-toMin(st.time):0;
+    let restMin=0;
+    pauses.forEach((p,i)=>{const r=resumes[i];if(r)restMin+=toMin(r.time)-toMin(p.time);});
+    const moveMin=Math.max(0,totalMin-restMin);
+    const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,i,arr)=>{
+        if(i===0)return 0; return acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo);},0):calcDist(hike.logs);
+    const speed=moveMin>0?(dist/(moveMin/60)).toFixed(1):'-';
+
+    /* 고도 (실시간 좌표 있을 때만, 참고용) */
+    let altInfo='';
+    if(hike.rtCoords&&hike.rtCoords.length>0){
+        const alts=hike.rtCoords.filter(c=>c.alt!==null).map(c=>c.alt);
+        if(alts.length>1){
+            const minAlt=Math.min(...alts).toFixed(0), maxAlt=Math.max(...alts).toFixed(0);
+            altInfo=`<div class="sum-row"><span class="sum-lbl">고도 범위</span><span class="sum-val">${minAlt}m ~ ${maxAlt}m <span style="font-size:11px;color:#A0AABA">(참고용)</span></span></div>`;
+        }
+    }
+
+    document.getElementById('summary-content').innerHTML=`
+        <style>
+        .sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+        .sum-card{background:white;border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.06);}
+        .sum-card-lbl{font-size:11px;color:var(--text-dim);font-weight:600;margin-bottom:3px;}
+        .sum-card-val{font-size:22px;font-weight:800;color:var(--text);}
+        .sum-card-unit{font-size:12px;font-weight:500;color:var(--text-dim);margin-left:2px;}
+        .sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+        .sum-row:last-child{border-bottom:none;}
+        .sum-lbl{font-size:13px;color:var(--text-dim);}
+        .sum-val{font-size:13px;font-weight:700;color:var(--text);}
+        </style>
+        <div class="sum-grid">
+            <div class="sum-card"><div class="sum-card-lbl">총 거리</div><div class="sum-card-val">${dist.toFixed(2)}<span class="sum-card-unit">km</span></div></div>
+            <div class="sum-card"><div class="sum-card-lbl">총 시간</div><div class="sum-card-val">${totalMin}<span class="sum-card-unit">분</span></div></div>
+            <div class="sum-card"><div class="sum-card-lbl">이동 시간</div><div class="sum-card-val">${moveMin}<span class="sum-card-unit">분</span></div></div>
+            <div class="sum-card"><div class="sum-card-lbl">평균 속도</div><div class="sum-card-val">${speed}<span class="sum-card-unit">km/h</span></div></div>
+        </div>
+        <div style="background:white;border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.06);">
+            <div class="sum-row"><span class="sum-lbl">산 이름</span><span class="sum-val">${hike.location||'미입력'}</span></div>
+            <div class="sum-row"><span class="sum-lbl">일자</span><span class="sum-val">${hike.date}</span></div>
+            <div class="sum-row"><span class="sum-lbl">출발</span><span class="sum-val">${st?st.time:'-'}</span></div>
+            <div class="sum-row"><span class="sum-lbl">종료</span><span class="sum-val">${en?en.time:'-'}</span></div>
+            <div class="sum-row"><span class="sum-lbl">휴식 ${pauses.length}회</span><span class="sum-val">${restMin}분</span></div>
+            <div class="sum-row"><span class="sum-lbl">기록 지점</span><span class="sum-val">${hike.logs.filter(l=>l.type==='기록').length}개</span></div>
+            ${altInfo}
+        </div>`;
+}
+window.closeSummary=function(){document.getElementById('summary-modal').style.display='none';};
+
+/* ══ 통계 패널 ══ */
+function openStats(){
+    document.getElementById('stats-panel').style.display='flex';
+    renderStats();
+}
+window.closeStats=function(){document.getElementById('stats-panel').style.display='none';};
+
+function renderStats(){
+    const all=[...hikeHistory];
+    const sc=document.getElementById('stats-content');
+    if(all.length===0){
+        sc.innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--text-dim);">
+            <div style="font-size:48px;margin-bottom:12px;">📊</div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:6px;">아직 데이터가 부족합니다</div>
+            <div style="font-size:13px;">산행을 종료하면 자동으로 보관되며<br>통계가 쌓이기 시작합니다</div>
+        </div>`;
+        document.getElementById('stats-range').textContent='';
+        return;
+    }
+    document.getElementById('stats-range').textContent=`${all.length}회 산행`;
+
+    /* ── 데이터 계산 ── */
+    function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
+    const hikesData=all.map(h=>{
+        const st=h.logs.find(l=>l.type==='출발');
+        const en=h.logs.find(l=>l.type==='종료');
+        const pauses=h.logs.filter(l=>l.type==='일시정지');
+        const resumes=h.logs.filter(l=>l.type==='재개');
+        let restMin=0;
+        pauses.forEach((p,i)=>{const r=resumes[i];if(r)restMin+=toMin(r.time)-toMin(p.time);});
+        const totalMin=(st&&en)?Math.max(0,toMin(en.time)-toMin(st.time)):0;
+        const moveMin=Math.max(0,totalMin-restMin);
+        const dist=h.rtCoords?h.rtCoords.reduce((acc,c,i,arr)=>i===0?0:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(h.logs);
+        return {date:h.date,loc:h.location||'미입력',dist,totalMin,moveMin,restMin,pts:h.logs.filter(l=>l.type==='기록').length};
+    });
+
+    const totalDist=hikesData.reduce((s,h)=>s+h.dist,0);
+    const totalTime=hikesData.reduce((s,h)=>s+h.totalMin,0);
+    const maxDist=hikesData.reduce((a,b)=>b.dist>a.dist?b:a,hikesData[0]);
+    const maxTime=hikesData.reduce((a,b)=>b.totalMin>a.totalMin?b:a,hikesData[0]);
+    const avgDist=(totalDist/all.length).toFixed(2);
+    const avgTime=Math.round(totalTime/all.length);
+
+    /* 자주 간 산 */
+    const locMap={};
+    hikesData.forEach(h=>{locMap[h.loc]=(locMap[h.loc]||0)+1;});
+    const topLocs=Object.entries(locMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+    /* 월별 집계 (올해) */
+    const thisYear=new Date().getFullYear();
+    const monthly=Array(12).fill(0);
+    hikesData.forEach(h=>{
+        if(h.date&&h.date.startsWith(thisYear)){
+            const m=parseInt(h.date.split('-')[1])-1;
+            if(m>=0&&m<12) monthly[m]++;
+        }
+    });
+    const maxMo=Math.max(...monthly,1);
+
+    /* 요일별 집계 */
+    const dayNames=['일','월','화','수','목','금','토'];
+    const weekday=Array(7).fill(0);
+    hikesData.forEach(h=>{if(h.date){const d=new Date(h.date).getDay();weekday[d]++;}});
+    const maxWd=Math.max(...weekday,1);
+
+    /* 활동 캘린더 (최근 1년) */
+    const calDates=new Set(hikesData.map(h=>h.date));
+    const today=new Date(); const cal=[];
+    for(let i=363;i>=0;i--){
+        const d=new Date(today); d.setDate(d.getDate()-i);
+        cal.push({date:d.toISOString().split('T')[0],hiked:calDates.has(d.toISOString().split('T')[0])});
+    }
+
+    /* ── 렌더링 ── */
+    sc.innerHTML=`
+    <style>
+    .st-sec{background:white;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 8px rgba(0,0,0,0.06);}
+    .st-sec-title{font-size:13px;font-weight:700;color:var(--text-dim);margin-bottom:12px;letter-spacing:0.3px;text-transform:uppercase;}
+    .st-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+    .st-kpi-card{background:white;border-radius:14px;padding:12px 10px;box-shadow:0 1px 8px rgba(0,0,0,0.06);text-align:center;}
+    .st-kpi-val{font-size:20px;font-weight:800;color:var(--text);}
+    .st-kpi-lbl{font-size:11px;color:var(--text-dim);margin-top:2px;}
+    .st-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+    .st-bar-lbl{font-size:12px;color:var(--text-dim);width:22px;text-align:center;flex-shrink:0;}
+    .st-bar-bg{flex:1;height:8px;background:rgba(0,0,0,0.06);border-radius:4px;overflow:hidden;}
+    .st-bar-fill{height:100%;border-radius:4px;background:var(--green);transition:width 0.4s;}
+    .st-bar-cnt{font-size:11px;color:var(--text-dim);width:16px;text-align:right;flex-shrink:0;}
+    .st-loc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+    .st-loc-row:last-child{border-bottom:none;}
+    .st-rank{width:22px;height:22px;border-radius:50%;background:rgba(46,125,85,0.1);color:var(--green);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .st-loc-name{flex:1;font-size:14px;font-weight:600;color:var(--text);margin:0 10px;}
+    .st-loc-cnt{font-size:13px;color:var(--text-dim);}
+    .cal-grid{display:grid;grid-template-columns:repeat(52,1fr);gap:2px;margin-top:6px;}
+    .cal-cell{aspect-ratio:1;border-radius:2px;background:rgba(0,0,0,0.06);}
+    .cal-cell.on{background:var(--green);}
+    .rec-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+    .rec-row:last-child{border-bottom:none;}
+    .rec-lbl{font-size:13px;color:var(--text-dim);}
+    .rec-val{font-size:13px;font-weight:700;color:var(--text);text-align:right;}
+    .rec-sub{font-size:11px;color:var(--text-dim);font-weight:400;}
+    </style>
+
+    <!-- KPI -->
+    <div class="st-kpi">
+        <div class="st-kpi-card"><div class="st-kpi-val">${all.length}</div><div class="st-kpi-lbl">총 산행</div></div>
+        <div class="st-kpi-card"><div class="st-kpi-val">${totalDist.toFixed(1)}</div><div class="st-kpi-lbl">총 거리 km</div></div>
+        <div class="st-kpi-card"><div class="st-kpi-val">${Math.round(totalTime/60)}</div><div class="st-kpi-lbl">총 시간 h</div></div>
+    </div>
+    <div class="st-kpi" style="margin-bottom:0">
+        <div class="st-kpi-card"><div class="st-kpi-val">${avgDist}</div><div class="st-kpi-lbl">평균 거리 km</div></div>
+        <div class="st-kpi-card"><div class="st-kpi-val">${avgTime}</div><div class="st-kpi-lbl">평균 시간 분</div></div>
+        <div class="st-kpi-card"><div class="st-kpi-val">${topLocs.length>0?topLocs[0][0].slice(0,4):'-'}</div><div class="st-kpi-lbl">최다 방문</div></div>
+    </div>
+
+    <!-- 개인 기록 -->
+    <div class="st-sec" style="margin-top:14px;">
+        <div class="st-sec-title">개인 기록</div>
+        <div class="rec-row"><span class="rec-lbl">최장 거리</span><span class="rec-val">${maxDist.dist.toFixed(2)}km <span class="rec-sub">${maxDist.loc} ${maxDist.date}</span></span></div>
+        <div class="rec-row"><span class="rec-lbl">최장 시간</span><span class="rec-val">${maxTime.totalMin}분 <span class="rec-sub">${maxTime.loc} ${maxTime.date}</span></span></div>
+        <div class="rec-row"><span class="rec-lbl">최다 지점</span><span class="rec-val">${hikesData.reduce((a,b)=>b.pts>a.pts?b:a,hikesData[0]).pts}개 <span class="rec-sub">${hikesData.reduce((a,b)=>b.pts>a.pts?b:a,hikesData[0]).loc}</span></span></div>
+    </div>
+
+    <!-- 자주 간 산 -->
+    <div class="st-sec">
+        <div class="st-sec-title">자주 찾은 산 TOP ${topLocs.length}</div>
+        ${topLocs.map(([name,cnt],i)=>`
+        <div class="st-loc-row">
+            <div class="st-rank">${i+1}</div>
+            <div class="st-loc-name">${name}</div>
+            <div class="st-loc-cnt">${cnt}회</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- 월별 차트 -->
+    <div class="st-sec">
+        <div class="st-sec-title">${thisYear}년 월별 산행</div>
+        ${monthly.map((cnt,i)=>`
+        <div class="st-bar-row">
+            <div class="st-bar-lbl">${i+1}월</div>
+            <div class="st-bar-bg"><div class="st-bar-fill" style="width:${cnt===0?'2px':Math.round(cnt/maxMo*100)+'%'}"></div></div>
+            <div class="st-bar-cnt">${cnt||''}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- 요일별 차트 -->
+    <div class="st-sec">
+        <div class="st-sec-title">요일별 산행 빈도</div>
+        ${dayNames.map((d,i)=>`
+        <div class="st-bar-row">
+            <div class="st-bar-lbl">${d}</div>
+            <div class="st-bar-bg"><div class="st-bar-fill" style="width:${weekday[i]===0?'2px':Math.round(weekday[i]/maxWd*100)+'%'};${i===0||i===6?'background:#E09820':''}"></div></div>
+            <div class="st-bar-cnt">${weekday[i]||''}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- 활동 캘린더 -->
+    <div class="st-sec">
+        <div class="st-sec-title">활동 캘린더 (최근 1년)</div>
+        <div class="cal-grid">
+            ${cal.map(c=>`<div class="cal-cell${c.hiked?' on':''}" title="${c.date}"></div>`).join('')}
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:8px;justify-content:flex-end;">
+            <div style="width:10px;height:10px;border-radius:2px;background:rgba(0,0,0,0.06)"></div>
+            <span style="font-size:11px;color:var(--text-dim)">미등산</span>
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--green);margin-left:6px"></div>
+            <span style="font-size:11px;color:var(--text-dim)">등산</span>
+        </div>
+    </div>
+    `;
 }
 
 [$dateInp,$locInp].forEach(el=>el.addEventListener('input',save));
 
+/* ══════════════════════════════════════════
+   한계 안내 모달 시스템
+   type: 'firstRun' | 'realtimeMode' | 'storage' | 'statsLow'
+══════════════════════════════════════════ */
+const LIMIT_CONFIGS = {
+    firstRun: {
+        icon: '⚠️',
+        title: '데이터 저장 한계를 먼저 읽어주세요',
+        body: '이 앱은 서버나 데이터베이스가 없습니다.\n모든 기록은 <b>이 기기의 브라우저 내부 저장공간</b>에만 저장됩니다.',
+        items: [
+            { warn: true,  text: '브라우저 설정에서 "인터넷 사용 기록 삭제" 또는 "사이트 데이터 삭제"를 실행하면 모든 산행 기록이 영구적으로 사라집니다' },
+            { warn: true,  text: '다른 기기나 다른 브라우저(Chrome → Safari 등)에서는 이 기록을 볼 수 없습니다' },
+            { warn: true,  text: '브라우저가 허용하는 저장 공간은 보통 5~10MB이며, 이를 초과하면 새 기록이 저장되지 않습니다' },
+            { warn: false, text: '중요한 기록은 반드시 메뉴 → 내보내기로 엑셀 파일에 백업해 두세요' },
+        ],
+        btnColor: '#2E7D55',
+        key: 'hikeApp_seenFirstRun'
+    },
+    realtimeMode: {
+        icon: '📡',
+        title: '실시간 추적의 한계',
+        body: '실시간 모드는 GPS를 상시 사용합니다.\n아래 사항을 반드시 확인하세요.',
+        items: [
+            { warn: true,  text: '경로 좌표는 30초 간격으로만 저장됩니다. 앱을 강제 종료하면 마지막 30초 이내 좌표는 유실될 수 있습니다' },
+            { warn: true,  text: '고도 데이터는 GPS 특성상 오차가 ±10~30m입니다. 통계에서 "참고용"으로만 표시됩니다' },
+            { warn: false, text: '화면이 꺼지면 저전력 GPS로 자동 전환됩니다. 위치 정확도가 다소 낮아질 수 있습니다' },
+            { warn: false, text: '30분 이상 이동이 없으면 자동 일시정지됩니다' },
+        ],
+        btnColor: '#4A90D9',
+        key: 'hikeApp_seenRealtime'
+    },
+    storage: {
+        icon: '🗂',
+        title: '저장 공간 부족 — 지금 바로 조치하세요',
+        body: '',   // 동적으로 채움
+        items: [],  // 동적으로 채움
+        btnColor: '#E05252',
+        key: null
+    },
+    statsLow: {
+        icon: '📊',
+        title: '통계 신뢰도 안내',
+        body: '현재 보관된 산행이 <b>5건 미만</b>입니다.\n데이터가 적을수록 통계의 의미가 제한됩니다.',
+        items: [
+            { warn: false, text: '월별·요일별 차트는 10회 이상 산행 데이터부터 의미있는 패턴이 나타납니다' },
+            { warn: false, text: '평균 거리·시간은 극단값 하나에 크게 영향받을 수 있습니다' },
+            { warn: false, text: '기록이 쌓일수록 통계가 점점 정확해집니다' },
+        ],
+        btnColor: '#6B7A8D',
+        key: null
+    }
+};
+
+function showLimitModal(type, onConfirm, extraData) {
+    const cfg = LIMIT_CONFIGS[type];
+    if(!cfg) return;
+
+    const modal   = document.getElementById('limit-modal');
+    const iconEl  = document.getElementById('limit-icon');
+    const titleEl = document.getElementById('limit-title');
+    const bodyEl  = document.getElementById('limit-body');
+    const itemsEl = document.getElementById('limit-items');
+    const okBtn   = document.getElementById('limit-ok');
+
+    iconEl.textContent = cfg.icon;
+    titleEl.textContent = cfg.title;
+    okBtn.style.background = cfg.btnColor;
+    okBtn.style.color = 'white';
+
+    /* storage 타입은 실제 수치로 동적 생성 */
+    if(type === 'storage' && extraData) {
+        const { usedKB, totalKB, pct, breakdown } = extraData;
+        const barColor = pct >= 95 ? '#E05252' : '#E09820';
+        bodyEl.innerHTML = `
+            <div style="margin-bottom:12px;">
+                이 앱의 기록이 브라우저 저장공간을
+                <b style="color:${barColor}">${pct}%</b> 사용하고 있습니다.
+            </div>
+            <div style="background:rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px;">
+                <div style="width:${Math.min(pct,100)}%;height:100%;background:${barColor};border-radius:8px;transition:width 0.5s;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#6B7A8D;margin-bottom:14px;">
+                <span>사용 중: <b style="color:${barColor}">${usedKB}KB</b></span>
+                <span>한도 추정: <b>${totalKB}KB</b></span>
+            </div>
+            <div style="font-size:13px;color:#4A5568;margin-bottom:4px;font-weight:600;">항목별 사용량</div>
+            ${breakdown.map(b=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+                <span style="font-size:13px;color:#4A5568;">${b.label}</span>
+                <span style="font-size:13px;font-weight:700;color:${b.warn?barColor:'#4A5568'};">${b.size}KB</span>
+            </div>`).join('')}
+            <div style="margin-top:14px;font-size:13px;color:#B85C00;font-weight:600;">
+                ${pct >= 95 ? '⚠ 공간이 거의 없습니다. 지금 즉시 조치하지 않으면 다음 산행 기록이 저장되지 않을 수 있습니다.' : '⚠ 공간이 부족해지고 있습니다. 미리 정리해두세요.'}
+            </div>`;
+        itemsEl.style.display = 'block';
+        itemsEl.innerHTML = [
+            { warn: true,  text: '메뉴 → 내보내기를 눌러 지금 바로 엑셀 파일로 백업하세요. 백업 후에는 보관함에서 오래된 기록을 삭제해 공간을 확보하세요' },
+            { warn: true,  text: '실시간 경로 좌표(GPS 궤적)가 가장 많은 공간을 차지합니다. 보관함에서 실시간 모드로 기록된 산행을 우선 삭제하면 효과적입니다' },
+            { warn: false, text: '삭제 없이 공간만 늘리는 방법은 없습니다. 이 앱은 기기 브라우저 안에서만 동작하기 때문입니다' },
+        ].map(item => `
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+                <span style="font-size:14px;flex-shrink:0;margin-top:1px">${item.warn ? '⚠' : '•'}</span>
+                <span style="font-size:13px;color:${item.warn ? '#B85C00' : '#4A5568'};line-height:1.5;">${item.text}</span>
+            </div>`).join('');
+    } else {
+        bodyEl.innerHTML = cfg.body.replace(/\n/g,'<br>');
+        if(cfg.items && cfg.items.length > 0) {
+            itemsEl.style.display = 'block';
+            itemsEl.innerHTML = cfg.items.map(item => `
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+                    <span style="font-size:14px;flex-shrink:0;margin-top:1px">${item.warn ? '⚠' : '•'}</span>
+                    <span style="font-size:13px;color:${item.warn ? '#B85C00' : '#4A5568'};line-height:1.5;">${item.text}</span>
+                </div>`).join('');
+        } else {
+            itemsEl.style.display = 'none';
+        }
+    }
+
+    modal.style.display = 'flex';
+
+    /* 버튼 리스너 교체 (중복 방지) — cloneNode로 기존 이벤트 전부 제거 */
+    const oldBtn = document.getElementById('limit-ok');
+    const newBtn = oldBtn.cloneNode(true);
+    /* 스타일은 cloneNode가 이미 복사하므로 별도 처리 불필요 */
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+    newBtn.style.background = cfg.btnColor;
+    newBtn.style.color = 'white';
+    newBtn.addEventListener('click', () => {
+        if(cfg.key) localStorage.setItem(cfg.key, '1');
+        document.getElementById('limit-modal').style.display = 'none';
+        if(onConfirm) onConfirm();
+    }, {once: true});
+}
+
+/* ══ 저장 공간 체크 — 항목별 실제 수치 표시 ══ */
+async function checkStorageUsage() {
+    try {
+        /* 항목별 크기 계산 (bytes) */
+        function byteSize(key) {
+            const v = localStorage.getItem(key);
+            return v ? (v.length + key.length) * 2 : 0;
+        }
+        const histBytes  = byteSize('hikeApp_history');
+        const curBytes   = byteSize('hikeApp_current');
+        const rtBytes    = byteSize('hikeApp_rtCoords');
+        const otherBytes = ['hikeApp_trackMode','hikeApp_startTs','hikeApp_pausedMs',
+                            'hikeApp_seenFirstRun','hikeApp_seenRealtime']
+                            .reduce((s,k)=>s+byteSize(k), 0);
+        const usedBytes  = histBytes + curBytes + rtBytes + otherBytes;
+
+        /* StorageEstimate API 우선, 없으면 5MB 기준 */
+        let totalBytes = 5 * 1024 * 1024;
+        if(navigator.storage && navigator.storage.estimate) {
+            const est = await navigator.storage.estimate();
+            if(est.quota) totalBytes = est.quota;
+        }
+
+        const pct     = Math.round(usedBytes / totalBytes * 100);
+        const usedKB  = Math.round(usedBytes / 1024);
+        const totalKB = Math.round(totalBytes / 1024);
+
+        /* 60% 미만이면 안내 불필요 */
+        if(pct < 60) return;
+
+        const breakdown = [
+            { label: '보관된 산행 기록',        size: Math.round(histBytes/1024),  warn: histBytes > 500*1024 },
+            { label: '현재 산행 기록',           size: Math.round(curBytes/1024),   warn: false },
+            { label: '실시간 GPS 경로 좌표',     size: Math.round(rtBytes/1024),    warn: rtBytes > 300*1024 },
+            { label: '기타 설정',               size: Math.round(otherBytes/1024), warn: false },
+        ].filter(b => b.size > 0);
+
+        showLimitModal('storage', null, { usedKB, totalKB, pct, breakdown });
+    } catch(e) {
+        console.warn('저장 공간 확인 실패:', e);
+    }
+}
+
+/* 통계 열 때 데이터 부족 경고 — openStats 선언 이후에 래핑 */
+function openStatsWithCheck() {
+    if(hikeHistory.length < 5) {
+        showLimitModal('statsLow', () => {
+            document.getElementById('stats-panel').style.display='flex';
+            renderStats();
+        });
+        return;
+    }
+    document.getElementById('stats-panel').style.display='flex';
+    renderStats();
+}
+
+/* 실시간 모드 선택 시 한계 안내 (최초 1회) — setTrackMode 직접 래핑 대신 플래그로 처리 */
+function setTrackModeWithCheck(mode) {
+    if(mode === 'realtime' && !localStorage.getItem('hikeApp_seenRealtime')) {
+        showLimitModal('realtimeMode', () => window.setTrackMode(mode));
+        return;
+    }
+    window.setTrackMode(mode);
+}
+
 /* ══ 초기화 ══ */
 window.onload=()=>{
     $dateInp.value=new Date().toISOString().split('T')[0];
+    const savedRt=localStorage.getItem('hikeApp_rtCoords');
+    if(savedRt) try{savedRtCoords=JSON.parse(savedRt);}catch(e){}
     const savedMode=localStorage.getItem('hikeApp_trackMode')||'manual';
     setTrackMode(savedMode);
     const sh=localStorage.getItem('hikeApp_history');
@@ -958,7 +1541,9 @@ window.onload=()=>{
                 $timerBig.classList.add('paused');
                 const e=sPm; $timerBig.textContent=`${String(Math.floor(e/3600)).padStart(2,'0')}:${String(Math.floor(e%3600/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;
                 $statusDot.className='paused';
-                $pause.textContent='▶ 재개'; $pause.classList.add('on');
+                document.getElementById('pause-ico').innerHTML = RESUME_SVG;
+                document.getElementById('pause-lbl').textContent = '재개';
+                $pause.classList.add('on');
                 $fab.classList.remove('show');
                 document.removeEventListener('visibilitychange',onVis);
                 document.addEventListener('visibilitychange',onVis);
@@ -976,6 +1561,15 @@ window.onload=()=>{
         );
     }
     refreshStats();
+
+    /* 첫 실행 시 한계 안내 */
+    if(!localStorage.getItem('hikeApp_seenFirstRun')) {
+        setTimeout(() => showLimitModal('firstRun'), 600);
+    }
+    /* 저장 용량 경고 (첫 실행 안내가 없을 때만) */
+    else {
+        setTimeout(checkStorageUsage, 1000);
+    }
 };
 </script>
 </body>

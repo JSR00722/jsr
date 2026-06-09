@@ -533,7 +533,10 @@ body {
         <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 16px;"></div>
         <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:14px;">🏔 산행 완료</div>
         <div id="summary-content"></div>
-        <button onclick="closeSummary()" style="width:100%;margin-top:16px;padding:14px;background:var(--green);color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;">확인</button>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            <button onclick="closeSummaryDiscard()" style="flex:1;padding:14px;background:rgba(0,0,0,0.06);color:var(--text-dim);border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">저장 안 함</button>
+            <button onclick="closeSummaryArchive()" style="flex:2;padding:14px;background:var(--green);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">보관함에 저장</button>
+        </div>
     </div>
 </div>
 
@@ -1317,13 +1320,6 @@ function doNewHike(){
 
 /* ══ 버튼 이벤트 ══ */
 $start.addEventListener('click',()=>{
-    if(curHike.logs.length>0){
-        if(!confirm('이전 기록이 있습니다. 보관함에 저장하고 새로 시작합니까?')) return;
-        _archiveCurrentHike();
-        curHike={date:$dateInp.value,location:$locInp.value,logs:[]};
-        localStorage.removeItem('hikeApp_current');
-        resetHike(); $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block'; refreshStats();
-    }
     setActive(true); startTimer(); lastMoveT=Date.now();
     if(trackMode==='realtime') startWatch(); else startIdle();
     fetchAndRecord('출발');
@@ -1331,10 +1327,6 @@ $start.addEventListener('click',()=>{
 
 function onEndClick(){
     if(!confirm('산행을 종료하시겠습니까?')) return;
-    if(!navigator.geolocation){
-        recordPoint('종료','','','');
-        _finishEnd(); return;
-    }
     $end.style.pointerEvents='none'; $pause.style.pointerEvents='none';
     wasAutoPaused=false;
     if(isPaused){ isPaused=false; }
@@ -1342,14 +1334,35 @@ function onEndClick(){
     if(trackMode==='realtime' && savedRtCoords.length>0){
         curHike.rtCoords = savedRtCoords.slice();
     }
+
+    /* 카운트다운 표시 */
+    const origEndHTML=$end.innerHTML;
+    let countdown=5;
+    $end.innerHTML=`<span style="font-variant-numeric:tabular-nums;">${countdown}초</span>`;
+    const cdIv=setInterval(()=>{
+        countdown--;
+        if(countdown>0){ $end.innerHTML=`<span style="font-variant-numeric:tabular-nums;">${countdown}초</span>`; }
+        else { clearInterval(cdIv); $end.innerHTML=origEndHTML; }
+    },1000);
+
+    if(!navigator.geolocation){
+        recordPoint('종료','','','');
+        setTimeout(()=>{ clearInterval(cdIv); $end.innerHTML=origEndHTML; _finishEnd(); },5000);
+        return;
+    }
+    /* GPS timeout을 5초로 맞춰 카운트다운과 동기화 */
     navigator.geolocation.getCurrentPosition(
         pos=>{
+            clearInterval(cdIv); $end.innerHTML=origEndHTML;
             updateMap(parseFloat(pos.coords.latitude.toFixed(5)),parseFloat(pos.coords.longitude.toFixed(5)));
             recordPoint('종료',pos.coords.latitude.toFixed(5),pos.coords.longitude.toFixed(5),'');
             _finishEnd();
         },
-        ()=>{alert('GPS 없음. 좌표 없이 기록합니다.');recordPoint('종료','','','');_finishEnd();},
-        {enableHighAccuracy:true,timeout:7000,maximumAge:30000}
+        ()=>{
+            clearInterval(cdIv); $end.innerHTML=origEndHTML;
+            recordPoint('종료','','',''); _finishEnd();
+        },
+        {enableHighAccuracy:true,timeout:5000,maximumAge:30000}
     );
 }
 function _finishEnd(){
@@ -1359,7 +1372,18 @@ function _finishEnd(){
     document.getElementById('pause-lbl').textContent = '정지';
     $pause.classList.remove('on');
     renderLogsFull(); refreshStats();
-    showSummary(curHike);
+    /* 요약 표시 후 curHike를 새 산행 상태로 초기화 (보관 여부는 모달 버튼에서 결정) */
+    const finishedHike=JSON.parse(JSON.stringify(curHike));
+    const _nd=new Date(); const _ndStr=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
+    curHike={date:_ndStr,location:'',logs:[]};
+    localStorage.removeItem('hikeApp_current');
+    $locInp.value=''; $dateInp.value=_ndStr;
+    resetHike();
+    $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block';
+    document.getElementById('dd-new').style.display='none';
+    /* _archiveCurrentHike는 finishedHike를 대상으로 하도록 오버라이드 */
+    window._pendingArchiveHike=finishedHike;
+    showSummary(finishedHike);
 }
 
 /* ══ 좌표 저장 헬퍼 ══ */
@@ -1426,7 +1450,18 @@ function showSummary(hike){
             ${altInfo}
         </div>`;
 }
-window.closeSummary=function(){document.getElementById('summary-modal').style.display='none';};
+window.closeSummaryArchive=function(){
+    document.getElementById('summary-modal').style.display='none';
+    const hike=window._pendingArchiveHike||curHike;
+    window._pendingArchiveHike=null;
+    hikeHistory.push(JSON.parse(JSON.stringify(hike)));
+    localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
+    refreshHistoryBadge();
+};
+window.closeSummaryDiscard=function(){
+    document.getElementById('summary-modal').style.display='none';
+    window._pendingArchiveHike=null;
+};
 
 /* ══════════════════════════════════════════
    한계 안내 모달 시스템

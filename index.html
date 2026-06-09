@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>등산 기록 앱</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; display: flex; flex-direction: column; height: 100vh; background-color: #f8f9fa; overflow: hidden; }
+        #header { padding: 10px; background: white; text-align: center; font-size: 18px; font-weight: bold; color: #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10; display: flex; justify-content: space-between; align-items: center;}
+        #map { flex: 1; width: 100%; z-index: 1; }
+        #log-container { height: 25vh; overflow-y: auto; background: white; padding: 10px 15px; border-top: 1px solid #ddd; }
+        .log-entry { font-size: 14px; padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .log-time { font-weight: bold; color: #34495e; }
+        .log-coord { font-size: 11px; color: #7f8c8d; }
+        #controls { display: flex; padding: 10px; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+        button { flex: 1; margin: 0 5px; padding: 15px 0; font-size: 16px; font-weight: bold; border-radius: 8px; border: none; color: white; cursor: pointer; }
+        #btn-start { background-color: #27ae60; }
+        #btn-record { background-color: #2980b9; }
+        #btn-end { background-color: #e74c3c; }
+        button:disabled { background-color: #bdc3c7; }
+        #btn-export { background-color: #8e44ad; padding: 5px 10px; font-size: 12px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <span>⛰️ 등산 기록</span>
+        <button id="btn-export">엑셀 저장</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="log-container">
+        <div id="logs"></div>
+    </div>
+
+    <div id="controls">
+        <button id="btn-start">🚀 출발</button>
+        <button id="btn-record" disabled>📍 기록</button>
+        <button id="btn-end" disabled>🏁 종료</button>
+    </div>
+
+    <script>
+        const map = L.map('map').setView([36.5, 127.5], 7); 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+        let currentMarker = null;
+        let routeCoords = [];
+        let routeLine = L.polyline(routeCoords, {color: '#e74c3c', weight: 4}).addTo(map);
+        
+        let hikeLogs = []; // 기록을 담을 배열
+
+        const btnStart = document.getElementById('btn-start');
+        const btnRecord = document.getElementById('btn-record');
+        const btnEnd = document.getElementById('btn-end');
+        const btnExport = document.getElementById('btn-export');
+        const logsDiv = document.getElementById('logs');
+
+        // 시작 시 브라우저에 저장된 이전 기록 불러오기
+        window.onload = () => {
+            const savedLogs = localStorage.getItem('hikeLogs');
+            if (savedLogs) {
+                hikeLogs = JSON.parse(savedLogs);
+                renderLogs();
+                // 저장된 기록이 있고 종료되지 않았다면 버튼 상태 복구
+                if (hikeLogs.length > 0 && hikeLogs[hikeLogs.length - 1].type !== '종료') {
+                    btnStart.disabled = true;
+                    btnRecord.disabled = false;
+                    btnEnd.disabled = false;
+                }
+            } else {
+                logsDiv.innerHTML = '<div style="color:#95a5a6; text-align:center; margin-top:10px; font-size:14px;">출발 버튼을 누르면 기록이 시작됩니다.</div>';
+            }
+
+            if(navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => updateMap(pos.coords.latitude, pos.coords.longitude), 
+                    () => {}, { enableHighAccuracy: false }
+                );
+            }
+        };
+
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function updateMap(lat, lng) {
+            const latlng = [lat, lng];
+            map.setView(latlng, 16); 
+            if (!currentMarker) currentMarker = L.marker(latlng).addTo(map);
+            else currentMarker.setLatLng(latlng);
+            routeCoords.push(latlng);
+            routeLine.setLatLngs(routeCoords);
+        }
+
+        // 기록 화면 표시 및 브라우저 저장
+        function saveRecord(type, lat = "", lng = "") {
+            const time = getCurrentTime();
+            const logItem = { type, time, lat, lng };
+            
+            // 기존 기록을 지우고 새로 시작 (새로운 '출발'일 경우)
+            if (type === '출발' && hikeLogs.length > 0 && hikeLogs[hikeLogs.length - 1].type === '종료') {
+                hikeLogs = [];
+                routeCoords = [];
+            }
+            
+            hikeLogs.push(logItem);
+            localStorage.setItem('hikeLogs', JSON.stringify(hikeLogs)); // 스마트폰에 저장
+            renderLogs();
+        }
+
+        // 화면에 기록 그리기
+        function renderLogs() {
+            logsDiv.innerHTML = '';
+            // 최신 기록이 위로 오도록 역순 출력
+            [...hikeLogs].reverse().forEach(log => {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                const coordText = (log.lat && log.lng) ? `<div class="log-coord">${log.lat}, ${log.lng}</div>` : '';
+                logEntry.innerHTML = `<div><span class="log-time">[${log.type}]</span> ${log.time}</div> ${coordText}`;
+                logsDiv.appendChild(logEntry);
+            });
+        }
+
+        function fetchLocationAndRecord(type) {
+            if (!navigator.geolocation) return alert("위치 정보를 지원하지 않습니다.");
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude.toFixed(5);
+                    const lng = position.coords.longitude.toFixed(5);
+                    updateMap(lat, lng);
+                    saveRecord(type, lat, lng);
+                },
+                (error) => alert("GPS 신호를 잡을 수 없습니다."),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        btnStart.addEventListener('click', () => {
+            btnStart.disabled = true; btnRecord.disabled = false; btnEnd.disabled = false;
+            fetchLocationAndRecord('출발');
+        });
+
+        btnRecord.addEventListener('click', () => {
+            btnRecord.disabled = true;
+            fetchLocationAndRecord('기록');
+            setTimeout(() => { btnRecord.disabled = false; }, 2000);
+        });
+
+        btnEnd.addEventListener('click', () => {
+            if(confirm("기록을 종료하시겠습니까?")) {
+                btnStart.disabled = false; btnRecord.disabled = true; btnEnd.disabled = true;
+                fetchLocationAndRecord('종료');
+            }
+        });
+
+        // 엑셀(CSV) 다운로드 기능
+        btnExport.addEventListener('click', () => {
+            if (hikeLogs.length === 0) return alert("저장된 기록이 없습니다.");
+            
+            let csvContent = "\uFEFF"; // 한글 깨짐 방지(BOM)
+            csvContent += "구분,시간,위도,경도\n";
+            
+            hikeLogs.forEach(log => {
+                csvContent += `${log.type},${log.time},${log.lat},${log.lng}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            
+            // 파일명에 오늘 날짜 추가
+            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            link.setAttribute("download", `등산기록_${today}.csv`);
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    </script>
+</body>
+</html>

@@ -671,7 +671,8 @@ function save(){
 
 /* ══ 타이머 ══ */
 function startTimer(ts,pm){
-    startTs=ts||Date.now(); pausedMs=pm||0; isPaused=false;
+    startTs = (ts!=null&&ts!==0) ? ts : Date.now();
+    pausedMs = pm||0; isPaused=false;
     $timerBig.classList.remove('paused');
     _tickStart();
     document.removeEventListener('visibilitychange',onVis);
@@ -712,6 +713,7 @@ function onVis(){
         /* 실시간: 화면 꺼지면 고정밀 → 저전력 GPS로 교체 (경로 연속성 유지) */
         if(trackMode==='realtime'&&!isPaused&&watchId!==null){
             navigator.geolocation.clearWatch(watchId); watchId=null;
+            lastMoveT=Date.now(); /* 저전력 전환 시점을 이동 기준으로 리셋 */
             startWatchLow();
         }
     } else {
@@ -723,8 +725,8 @@ function onVis(){
             if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
             startWatch();
         }
-        /* 밀린 렌더링 일괄 처리 */
-        renderLogsFull(); refreshStats();
+        /* 밀린 렌더링 — 산행 중일 때만 */
+        if($ctrlAct.classList.contains('show')){ renderLogsFull(); refreshStats(); }
         if(trackMode==='realtime') rtLine.setLatLngs(rtCoords);
         if(wasAutoPaused){wasAutoPaused=false;setTimeout(()=>alert('30분 이상 이동이 없어 자동 일시정지되었습니다.\n재개 버튼을 눌러 계속하세요.'),200);}
     }
@@ -905,19 +907,22 @@ function renderLogsFull(){
 }
 function _makeLogEl(log){
     const el=document.createElement('div'); el.className='log-entry'; el.dataset.id=log.id;
-    const memo=log.memo||(TYPE_MEMO[log.type]||'지점');
+    const memoText=log.memo||(TYPE_MEMO[log.type]||'지점');
     const coord=(log.lat&&log.lng)?`${(+log.lat).toFixed(4)}, ${(+log.lng).toFixed(4)}`:'';
+    /* XSS 방지: memo는 textContent로 삽입 */
     el.innerHTML=`
         <div class="log-dot dot-${log.type}">${TYPE_ICON[log.type]||'⚪'}</div>
         <div class="log-body">
             <div class="log-top">
-                <span class="log-type">${log.type}</span>
+                <span class="log-type"></span>
                 <span class="log-time">${log.time}</span>
             </div>
-            <div class="log-memo">${memo}</div>
+            <div class="log-memo"></div>
             ${coord?`<div class="log-coord">${coord}</div>`:''}
         </div>
         <button class="btn-del" onclick="deleteLog(${log.id})" aria-label="삭제">×</button>`;
+    el.querySelector('.log-type').textContent=log.type;
+    el.querySelector('.log-memo').textContent=memoText;
     return el;
 }
 
@@ -993,7 +998,9 @@ function doExport(){
         let cum=0;
         hike.logs.forEach((log,i)=>{
             if(i>0&&log.lat&&log.lng){const prev=hike.logs.slice(0,i).reverse().find(l=>l.lat&&l.lng);if(prev)cum+=hav(+prev.lat,+prev.lng,+log.lat,+log.lng);}
-            csv+=`${log.type},${hike.date},${hike.location||'미입력'},${log.time},${log.memo||''},${log.lat||''},${log.lng||''},${cum.toFixed(3)}\n`;
+            const safeMemo = (log.memo||'').replace(/"/g,'""');
+            const safeLoc  = (hike.location||'미입력').replace(/"/g,'""');
+            csv+=`${log.type},${hike.date},"${safeLoc}",${log.time},"${safeMemo}",${log.lat||''},${log.lng||''},${cum.toFixed(3)}\n`;
         });
     });
     const a=document.createElement('a');
@@ -1013,13 +1020,19 @@ function resetHike(){
     if(curMarker){map.removeLayer(curMarker);curMarker=null;}
 }
 
-/* ══ 새 산행 ══ */
-function doNewHike(){
-    if(curHike.logs.length===0) return alert('저장할 기록이 없습니다.');
-    if(!confirm('현재 기록을 보관함에 저장하고 새 산행을 시작합니까?')) return;
+/* ══ 공통: 현재 산행 보관함에 저장 ══ */
+function _archiveCurrentHike(){
     hikeHistory.push(JSON.parse(JSON.stringify(curHike)));
     localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
     refreshHistoryBadge();
+}
+
+/* ══ 새 산행 ══ */
+function doNewHike(){
+    if($ctrlAct.classList.contains('show')) return alert('산행을 먼저 종료해주세요.');
+    if(curHike.logs.length===0) return alert('저장할 기록이 없습니다.');
+    if(!confirm('현재 기록을 보관함에 저장하고 새 산행을 시작합니까?')) return;
+    _archiveCurrentHike();
     curHike={date:$dateInp.value,location:'',logs:[]};
     localStorage.removeItem('hikeApp_current'); $locInp.value='';
     resetHike(); stopTimer(); setActive(false);
@@ -1031,9 +1044,7 @@ function doNewHike(){
 $start.addEventListener('click',()=>{
     if(curHike.logs.length>0){
         if(!confirm('이전 기록이 있습니다. 보관함에 저장하고 새로 시작합니까?')) return;
-        hikeHistory.push(JSON.parse(JSON.stringify(curHike)));
-        localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
-        refreshHistoryBadge();
+        _archiveCurrentHike();
         curHike={date:$dateInp.value,location:'',logs:[]};
         localStorage.removeItem('hikeApp_current'); $locInp.value='';
         resetHike(); $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block'; refreshStats();
@@ -1045,9 +1056,17 @@ $start.addEventListener('click',()=>{
 
 function onEndClick(){
     if(!confirm('산행을 종료하시겠습니까?')) return;
+    if(!navigator.geolocation){
+        recordPoint('종료','','','');
+        _finishEnd(); return;
+    }
     $end.style.pointerEvents='none'; $pause.style.pointerEvents='none';
-    wasAutoPaused=false; if(isPaused) isPaused=false;
+    wasAutoPaused=false;
+    if(isPaused){ isPaused=false; }
     stopWatch(); stopIdle();
+    if(trackMode==='realtime' && savedRtCoords.length>0){
+        curHike.rtCoords = savedRtCoords.slice();
+    }
     navigator.geolocation.getCurrentPosition(
         pos=>{
             updateMap(parseFloat(pos.coords.latitude.toFixed(5)),parseFloat(pos.coords.longitude.toFixed(5)));
@@ -1065,10 +1084,6 @@ function _finishEnd(){
     document.getElementById('pause-lbl').textContent = '정지';
     $pause.classList.remove('on');
     renderLogsFull(); refreshStats();
-    /* 실시간 좌표를 현재 산행에 첨부 후 저장 */
-    if(trackMode==='realtime'&&savedRtCoords.length>0){
-        curHike.rtCoords=savedRtCoords.slice();
-    }
     showSummary(curHike);
 }
 
@@ -1087,14 +1102,15 @@ function showSummary(hike){
     const pauses=hike.logs.filter(l=>l.type==='일시정지');
     const resumes=hike.logs.filter(l=>l.type==='재개');
 
-    /* 시간 파싱 HH:MM → 분 */
+    /* 시간 파싱 HH:MM → 분, 자정 넘김 처리 */
     function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
-    const totalMin = (st&&en)?toMin(en.time)-toMin(st.time):0;
+    function diffMin(from,to){let d=toMin(to)-toMin(from);if(d<0)d+=24*60;return d;}
+    const totalMin = (st&&en)?diffMin(st.time,en.time):0;
     let restMin=0;
-    pauses.forEach((p,i)=>{const r=resumes[i];if(r)restMin+=toMin(r.time)-toMin(p.time);});
+    pauses.forEach((p,i)=>{const r=resumes[i];if(r)restMin+=diffMin(p.time,r.time);});
     const moveMin=Math.max(0,totalMin-restMin);
-    const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,i,arr)=>{
-        if(i===0)return 0; return acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo);},0):calcDist(hike.logs);
+    const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,i,arr)=>
+        i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(hike.logs);
     const speed=moveMin>0?(dist/(moveMin/60)).toFixed(1):'-';
 
     /* 고도 (실시간 좌표 있을 때만, 참고용) */
@@ -1160,16 +1176,18 @@ function renderStats(){
 
     /* ── 데이터 계산 ── */
     function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
+    function diffMin(from,to){let d=toMin(to)-toMin(from);if(d<0)d+=24*60;return d;}
     const hikesData=all.map(h=>{
         const st=h.logs.find(l=>l.type==='출발');
         const en=h.logs.find(l=>l.type==='종료');
         const pauses=h.logs.filter(l=>l.type==='일시정지');
         const resumes=h.logs.filter(l=>l.type==='재개');
         let restMin=0;
-        pauses.forEach((p,i)=>{const r=resumes[i];if(r)restMin+=toMin(r.time)-toMin(p.time);});
-        const totalMin=(st&&en)?Math.max(0,toMin(en.time)-toMin(st.time)):0;
+        pauses.forEach((p,i)=>{const r=resumes[i];if(r)restMin+=diffMin(p.time,r.time);});
+        const totalMin=(st&&en)?Math.max(0,diffMin(st.time,en.time)):0;
         const moveMin=Math.max(0,totalMin-restMin);
-        const dist=h.rtCoords?h.rtCoords.reduce((acc,c,i,arr)=>i===0?0:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(h.logs);
+        const dist=h.rtCoords?h.rtCoords.reduce((acc,c,i,arr)=>
+            i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(h.logs);
         return {date:h.date,loc:h.location||'미입력',dist,totalMin,moveMin,restMin,pts:h.logs.filter(l=>l.type==='기록').length};
     });
 
@@ -1186,7 +1204,7 @@ function renderStats(){
     const topLocs=Object.entries(locMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
     /* 월별 집계 (올해) */
-    const thisYear=new Date().getFullYear();
+    const thisYear=String(new Date().getFullYear());
     const monthly=Array(12).fill(0);
     hikesData.forEach(h=>{
         if(h.date&&h.date.startsWith(thisYear)){
@@ -1464,7 +1482,8 @@ async function checkStorageUsage() {
         let totalBytes = 5 * 1024 * 1024;
         if(navigator.storage && navigator.storage.estimate) {
             const est = await navigator.storage.estimate();
-            if(est.quota) totalBytes = est.quota;
+            /* quota가 수 GB를 반환하는 브라우저 대응 — 10MB로 상한 */
+            if(est.quota) totalBytes = Math.min(est.quota, 10 * 1024 * 1024);
         }
 
         const pct     = Math.round(usedBytes / totalBytes * 100);
@@ -1517,12 +1536,14 @@ window.onload=()=>{
     const savedMode=localStorage.getItem('hikeApp_trackMode')||'manual';
     setTrackMode(savedMode);
     const sh=localStorage.getItem('hikeApp_history');
-    if(sh) hikeHistory=JSON.parse(sh);
+    if(sh) try{hikeHistory=JSON.parse(sh);}catch(e){console.warn('hikeHistory 복원 실패',e);}
     refreshHistoryBadge();
     const sc=localStorage.getItem('hikeApp_current');
+    let scParsed = false;
     if(sc){
-        curHike=JSON.parse(sc);
-        if(curHike.date) $dateInp.value=curHike.date;
+        try{ curHike=JSON.parse(sc); scParsed=true; } catch(e){ console.warn('curHike 복원 실패',e); }
+    }
+    if(scParsed){
         $locInp.value=curHike.location||'';
         curHike.logs.forEach(l=>{if(l.lat&&l.lng) routeCoords.push([+l.lat,+l.lng]);});
         if(routeCoords.length>0){

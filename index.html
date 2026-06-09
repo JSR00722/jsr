@@ -8,11 +8,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        /* 기본 스타일 및 색상 (Nature & Premium) */
         :root {
             --primary: #2c3e50;
             --primary-bg: #1a252f;
-            --secondary: #e67e22;
             --secondary-bright: #f39c12;
             --dark-gray: #121212;
             --medium-gray: #34495e;
@@ -25,112 +23,101 @@
             font-family: 'Malgun Gothic', 'Noto Sans KR', sans-serif; 
             display: flex; flex-direction: column; 
             height: 100vh; background-color: var(--dark-gray); color: white; 
-            overflow: hidden; /* 전체 화면 스크롤 방지 */
-            -webkit-user-select: none; /* 텍스트 선택 방지 */
+            overflow: hidden; -webkit-user-select: none;
         }
         
-        /* 헤더 스타일 */
+        /* 상단 헤더 & 유틸리티 버튼 */
         #header { 
             padding: 15px 20px; 
             background: linear-gradient(135deg, var(--primary-bg) 0%, #2980b9 100%); 
             display: flex; justify-content: space-between; align-items: center; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100;
         }
-        #header h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        #header h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
         
-        /* 일자/장소 입력창 영역 */
-        #inputs {
-            padding: 15px 20px;
-            background: var(--dark-gray);
-            border-bottom: 1px solid var(--medium-gray);
-            z-index: 90;
+        #header-buttons { display: flex; gap: 8px; }
+        .head-btn { 
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); 
+            color: white; padding: 6px 10px; border-radius: 6px; 
+            font-size: 12px; font-weight: bold; cursor: pointer; transition: background 0.2s;
         }
+        .head-btn:active { background: rgba(255,255,255,0.4); }
+
+        /* 일자/장소 입력창 */
+        #inputs { padding: 12px 20px; background: var(--dark-gray); border-bottom: 1px solid var(--medium-gray); z-index: 90; }
         #inputs input {
-            width: 100%;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: white;
-            font-size: 14px;
-            box-sizing: border-box;
-            transition: all 0.3s;
+            width: 100%; padding: 10px 15px; margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px; color: white; font-size: 14px; box-sizing: border-box;
         }
-        #inputs input:focus {
-            outline: none;
-            border-color: var(--secondary-bright);
-            background: rgba(255, 255, 255, 0.08);
-        }
+        #inputs input:focus { outline: none; border-color: var(--secondary-bright); }
         #inputs input:last-child { margin-bottom: 0; }
 
         /* 지도 영역 */
         #map { flex: 1; width: 100%; z-index: 1; border-top: 1px solid var(--medium-gray); }
 
-        /* 텍스트 로그 기록창 (지도 아래) */
+        /* 텍스트 로그 기록창 */
         #log-container { 
-            height: 25vh; /* 화면의 25% 차지 */
-            overflow-y: auto; background: var(--dark-gray); 
+            height: 25vh; overflow-y: auto; background: var(--dark-gray); 
             padding: 10px 15px; border-top: 1px solid var(--medium-gray);
-            display: flex; flex-direction: column;
         }
-        #logsDiv h2 { font-size: 14px; color: var(--light-gray); text-transform: uppercase; margin: 10px 0; letter-spacing: 1px; }
-        .log-entry { font-size: 14px; padding: 10px 15px; border-radius: 8px; background: var(--log-bg); border: 1px solid transparent; transition: background 0.3s; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;}
-        .log-entry:last-child { margin-bottom: 0; }
+        #logsDiv h2 { font-size: 13px; color: var(--light-gray); text-transform: uppercase; margin: 5px 0 10px 0; letter-spacing: 1px; display: flex; justify-content: space-between;}
+        #history-count { color: var(--secondary-bright); }
+        
+        .log-entry { font-size: 14px; padding: 10px 15px; border-radius: 8px; background: var(--log-bg); display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;}
         .log-content { display: flex; align-items: center; }
         .log-index { color: var(--secondary-bright); font-weight: bold; margin-right: 12px; font-size: 13px;}
         .log-time { font-weight: bold; color: var(--light-gray); font-size: 13px; }
         .log-text { color: white; margin-top: 2px; }
         .log-coord { font-size: 11px; color: var(--light-gray); text-align: right; }
 
-        /* 하단 조작 버튼 영역 (앱 바 형태로 고정) */
+        /* 하단 조작 버튼 영역 */
         #controls { 
-            display: flex; padding: 15px 15px; background: var(--primary-bg);
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
-            /* 아이폰 하단 홈 바 및 상단 노치 영역 침범 방지 */
-            padding-bottom: max(15px, env(safe-area-inset-bottom));
-            z-index: 100;
+            display: flex; padding: 12px 15px; background: var(--primary-bg);
+            padding-bottom: max(12px, env(safe-area-inset-bottom)); z-index: 100;
         }
-        button { 
-            flex: 1; margin: 0 5px; padding: 18px 0; 
-            font-size: 16px; font-weight: 800; border-radius: 12px; 
-            border: none; color: white; cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        .main-btn { 
+            flex: 1; margin: 0 5px; padding: 15px 0; 
+            font-size: 15px; font-weight: 800; border-radius: 12px; 
+            border: none; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center;
         }
-        button:active { transform: scale(0.96); opacity: 0.8; }
-        button .btn-icon { font-size: 20px; margin-bottom: 4px; }
+        .main-btn:active { transform: scale(0.96); opacity: 0.8; }
+        .main-btn .btn-icon { font-size: 18px; margin-bottom: 4px; }
         
         #btn-start { background: linear-gradient(135deg, #16a085 0%, #27ae60 100%); }
         #btn-record { background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); }
         #btn-end { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%); }
-        button:disabled { background: linear-gradient(135deg, var(--light-gray) 0%, var(--medium-gray) 100%); color: rgba(255, 255, 255, 0.4); pointer-events: none; }
+        .main-btn:disabled { background: linear-gradient(135deg, var(--light-gray) 0%, var(--medium-gray) 100%); color: rgba(255, 255, 255, 0.4); pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div id="header">
-        <h1>나의 등산 기록 (Hike Log)</h1>
+        <h1>⛰️ 나의 등산 기록</h1>
+        <div id="header-buttons">
+            <button class="head-btn" id="btn-new">🔄 새 산행</button>
+            <button class="head-btn" id="btn-export">💾 엑셀저장</button>
+        </div>
     </div>
 
     <div id="inputs">
-        <input type="text" id="hike-date" placeholder="등산 일자 (예: 2026.06.09 화)">
-        <input type="text" id="hike-location" placeholder="등산 장소 (예: 지리산 - 대나무숲 코스)">
+        <input type="text" id="hike-date" placeholder="등산 일자 (예: 2026.06.09)">
+        <input type="text" id="hike-location" placeholder="등산 장소 (예: 설악산 대청봉)">
     </div>
 
     <div id="map"></div>
 
     <div id="log-container">
         <div id="logsDiv">
-            <h2>기록 리스트</h2>
-            <div id="logs" style="color: var(--light-gray); text-align: center; margin-top: 20px; font-size: 14px;">출발 버튼을 누르면 기록이 시작됩니다.</div>
+            <h2><span>현재 산행 기록</span> <span id="history-count">보관된 산행: 0건</span></h2>
+            <div id="logs" style="color: var(--light-gray); text-align: center; margin-top: 20px; font-size: 13px;">출발 버튼을 누르면 기록이 시작됩니다.</div>
         </div>
     </div>
 
     <div id="controls">
-        <button id="btn-start"><span class="btn-icon">🚀</span>출발 (Start)</button>
-        <button id="btn-record" disabled><span class="btn-icon">📍</span>시간기록 (Log Point)</button>
-        <button id="btn-end" disabled><span class="btn-icon">🏁</span>종료 (End)</button>
+        <button class="main-btn" id="btn-start"><span class="btn-icon">🚀</span>출발</button>
+        <button class="main-btn" id="btn-record" disabled><span class="btn-icon">📍</span>시간기록</button>
+        <button class="main-btn" id="btn-end" disabled><span class="btn-icon">🏁</span>종료</button>
     </div>
 
     <script>
@@ -141,39 +128,63 @@
         let routeCoords = [];
         let routeLine = L.polyline(routeCoords, {color: '#e74c3c', weight: 4}).addTo(map);
         
-        let hikeLogs = []; 
+        // 데이터 저장 구조
+        let currentHike = { date: "", location: "", logs: [] };
+        let hikeHistory = []; 
 
         const btnStart = document.getElementById('btn-start');
         const btnRecord = document.getElementById('btn-record');
         const btnEnd = document.getElementById('btn-end');
+        const btnNew = document.getElementById('btn-new');
+        const btnExport = document.getElementById('btn-export');
+        
         const logsDiv = document.getElementById('logs');
         const dateInput = document.getElementById('hike-date');
         const locationInput = document.getElementById('hike-location');
+        const historyCountDisplay = document.getElementById('history-count');
 
+        // 앱 시작 시 데이터 불러오기
         window.onload = () => {
-            const savedLogs = localStorage.getItem('hikeLogs_v2');
-            if (savedLogs) {
-                const savedData = JSON.parse(savedLogs);
-                dateInput.value = savedData.date || '';
-                locationInput.value = savedData.location || '';
-                hikeLogs = savedData.logs || [];
+            const savedCurrent = localStorage.getItem('hikeApp_current');
+            const savedHistory = localStorage.getItem('hikeApp_history');
+            
+            if (savedHistory) hikeHistory = JSON.parse(savedHistory);
+            updateHistoryCount();
+
+            if (savedCurrent) {
+                currentHike = JSON.parse(savedCurrent);
+                dateInput.value = currentHike.date || '';
+                locationInput.value = currentHike.location || '';
+                
+                // 이전 경로선 복구
+                currentHike.logs.forEach(log => {
+                    if(log.lat && log.lng) {
+                        const latlng = [parseFloat(log.lat), parseFloat(log.lng)];
+                        routeCoords.push(latlng);
+                        if(!currentMarker) { map.setView(latlng, 16); currentMarker = L.marker(latlng).addTo(map); }
+                        else currentMarker.setLatLng(latlng);
+                    }
+                });
+                routeLine.setLatLngs(routeCoords);
                 renderLogs();
-                if (hikeLogs.length > 0 && hikeLogs[hikeLogs.length - 1].type !== '종료') {
+
+                // 진행 중인 산행이 있으면 버튼 상태 복구
+                if (currentHike.logs.length > 0 && currentHike.logs[currentHike.logs.length - 1].type !== '종료') {
                     btnStart.disabled = true; btnRecord.disabled = false; btnEnd.disabled = false;
                 }
-            }
-
-            if(navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    pos => updateMap(pos.coords.latitude, pos.coords.longitude), 
-                    () => {}, { enableHighAccuracy: false }
-                );
+            } else {
+                // 초기 위치 잡기
+                if(navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        pos => { map.setView([pos.coords.latitude, pos.coords.longitude], 16); }, 
+                        () => {}, { enableHighAccuracy: false }
+                    );
+                }
             }
         };
 
         function getCurrentTime() {
-            const now = new Date();
-            return now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
         function updateMap(lat, lng) {
@@ -185,40 +196,36 @@
             routeLine.setLatLngs(routeCoords);
         }
 
-        function saveData() {
-            const dataToSave = {
-                date: dateInput.value,
-                location: locationInput.value,
-                logs: hikeLogs
-            };
-            localStorage.setItem('hikeLogs_v2', JSON.stringify(dataToSave));
+        function updateHistoryCount() {
+            historyCountDisplay.innerText = `보관된 산행: ${hikeHistory.length}건`;
         }
 
-        function saveRecord(type, lat = "", lng = "") {
-            const time = getCurrentTime();
-            const logItem = { type, time, lat, lng };
-            if (type === '출발' && hikeLogs.length > 0 && hikeLogs[hikeLogs.length - 1].type === '종료') {
-                hikeLogs = [];
-                routeCoords = [];
-            }
-            hikeLogs.push(logItem);
-            saveData(); 
+        function saveCurrentState() {
+            currentHike.date = dateInput.value;
+            currentHike.location = locationInput.value;
+            localStorage.setItem('hikeApp_current', JSON.stringify(currentHike));
+        }
+
+        function recordPoint(type, lat = "", lng = "") {
+            const logItem = { type, time: getCurrentTime(), lat, lng };
+            currentHike.logs.push(logItem);
+            saveCurrentState(); 
             renderLogs();
         }
 
         function renderLogs() {
-            if (hikeLogs.length === 0) {
-                logsDiv.innerHTML = '<div style="color: var(--light-gray); text-align: center; margin-top: 20px; font-size: 14px;">출발 버튼을 누르면 기록이 시작됩니다.</div>';
+            if (currentHike.logs.length === 0) {
+                logsDiv.innerHTML = '<div style="color: var(--light-gray); text-align: center; margin-top: 20px; font-size: 13px;">출발 버튼을 누르면 기록이 시작됩니다.</div>';
                 return;
             }
             logsDiv.innerHTML = '';
-            [...hikeLogs].reverse().forEach((log, index) => {
+            [...currentHike.logs].reverse().forEach((log, index) => {
                 const logEntry = document.createElement('div');
                 logEntry.className = 'log-entry';
                 const coordText = (log.lat && log.lng) ? `<div class="log-coord">${log.lat}, ${log.lng}</div>` : '';
                 logEntry.innerHTML = `
                     <div class="log-content">
-                        <div class="log-index">${hikeLogs.length - index}</div>
+                        <div class="log-index">${currentHike.logs.length - index}</div>
                         <div>
                             <div class="log-time">[${log.time}]</div>
                             <div class="log-text">${log.type} 지점</div>
@@ -237,13 +244,14 @@
                     const lat = position.coords.latitude.toFixed(5);
                     const lng = position.coords.longitude.toFixed(5);
                     updateMap(lat, lng);
-                    saveRecord(type, lat, lng);
+                    recordPoint(type, lat, lng);
                 },
-                (error) => alert("GPS 신호를 잡을 수 없습니다 탁 트인 곳으로 이동해 주세요."),
+                (error) => alert("GPS 신호를 잡을 수 없습니다."),
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
 
+        // --- 메인 버튼 이벤트 ---
         btnStart.addEventListener('click', () => {
             btnStart.disabled = true; btnRecord.disabled = false; btnEnd.disabled = false;
             fetchLocationAndRecord('출발');
@@ -255,15 +263,75 @@
         });
 
         btnEnd.addEventListener('click', () => {
-            if(confirm("기록을 종료하시겠습니까?")) {
+            if(confirm("현재 산행 기록을 종료하시겠습니까?")) {
                 btnStart.disabled = false; btnRecord.disabled = true; btnEnd.disabled = true;
                 fetchLocationAndRecord('종료');
             }
         });
 
-        // 일자/장소 입력창 변경 시에도 저장
+        // --- 상단 헤더 버튼 이벤트 ---
+        
+        // 1. 새 산행 준비 (기존 기록 보관함으로 이동 및 초기화)
+        btnNew.addEventListener('click', () => {
+            if (currentHike.logs.length === 0) return alert("저장할 이전 산행 기록이 없습니다.");
+            
+            if(confirm("현재 산행을 '보관함'에 저장하고, 새로운 산행을 준비하시겠습니까? (화면이 초기화됩니다)")) {
+                // 현재 기록을 History에 추가
+                hikeHistory.push(JSON.parse(JSON.stringify(currentHike)));
+                localStorage.setItem('hikeApp_history', JSON.stringify(hikeHistory));
+                updateHistoryCount();
+
+                // 현재 상태 초기화
+                currentHike = { date: "", location: "", logs: [] };
+                localStorage.removeItem('hikeApp_current');
+                
+                // UI 초기화
+                dateInput.value = "";
+                locationInput.value = "";
+                routeCoords = [];
+                routeLine.setLatLngs([]);
+                if(currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
+                renderLogs();
+                
+                // 버튼 초기화
+                btnStart.disabled = false; btnRecord.disabled = true; btnEnd.disabled = true;
+                alert("이전 기록이 보관되었습니다. 새로운 장소와 일자를 입력하고 출발하세요!");
+            }
+        });
+
+        // 2. 전체 기록 엑셀 저장 (보관함 + 현재 기록 모두 다운로드)
+        btnExport.addEventListener('click', () => {
+            const allData = [...hikeHistory];
+            if (currentHike.logs.length > 0) allData.push(currentHike);
+
+            if (allData.length === 0) return alert("다운로드할 산행 기록이 없습니다.");
+
+            let csvContent = "\uFEFF"; // 한글 깨짐 방지
+            csvContent += "등산일자,등산장소,구분,시간,위도,경도\n";
+            
+            allData.forEach(hike => {
+                const hDate = hike.date || "미입력";
+                const hLoc = hike.location || "미입력";
+                hike.logs.forEach(log => {
+                    csvContent += `${hDate},${hLoc},${log.type},${log.time},${log.lat},${log.lng}\n`;
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            
+            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            link.download = `전체산행기록_${today}.csv`;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // 입력창 변경 실시간 저장
         [dateInput, locationInput].forEach(input => {
-            input.addEventListener('input', saveData);
+            input.addEventListener('input', saveCurrentState);
         });
     </script>
 </body>

@@ -1553,13 +1553,11 @@ async function checkStorageUsage() {
 function openStatsWithCheck() {
     if(hikeHistory.length < 5) {
         showLimitModal('statsLow', () => {
-            document.getElementById('stats-panel').style.display='flex';
-            renderStats();
+            openStats(); // 정상적으로 시트를 올리는 함수 호출
         });
         return;
     }
-    document.getElementById('stats-panel').style.display='flex';
-    renderStats();
+    openStats(); // 정상적으로 시트를 올리는 함수 호출
 }
 
 /* 실시간 모드 선택 시 한계 안내 (최초 1회) — setTrackMode 직접 래핑 대신 플래그로 처리 */

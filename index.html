@@ -2,45 +2,135 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>등산 기록 앱</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>나의 등산 기록 (Hike Log)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        body { margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; display: flex; flex-direction: column; height: 100vh; background-color: #f8f9fa; overflow: hidden; }
-        #header { padding: 10px; background: white; text-align: center; font-size: 18px; font-weight: bold; color: #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10; display: flex; justify-content: space-between; align-items: center;}
-        #map { flex: 1; width: 100%; z-index: 1; }
-        #log-container { height: 25vh; overflow-y: auto; background: white; padding: 10px 15px; border-top: 1px solid #ddd; }
-        .log-entry { font-size: 14px; padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .log-time { font-weight: bold; color: #34495e; }
-        .log-coord { font-size: 11px; color: #7f8c8d; }
-        #controls { display: flex; padding: 10px; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
-        button { flex: 1; margin: 0 5px; padding: 15px 0; font-size: 16px; font-weight: bold; border-radius: 8px; border: none; color: white; cursor: pointer; }
-        #btn-start { background-color: #27ae60; }
-        #btn-record { background-color: #2980b9; }
-        #btn-end { background-color: #e74c3c; }
-        button:disabled { background-color: #bdc3c7; }
-        #btn-export { background-color: #8e44ad; padding: 5px 10px; font-size: 12px; border-radius: 4px; }
+        /* 기본 스타일 및 색상 (Nature & Premium) */
+        :root {
+            --primary: #2c3e50;
+            --primary-bg: #1a252f;
+            --secondary: #e67e22;
+            --secondary-bright: #f39c12;
+            --dark-gray: #121212;
+            --medium-gray: #34495e;
+            --light-gray: #95a5a6;
+            --log-bg: #1e1e1e;
+        }
+
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Malgun Gothic', 'Noto Sans KR', sans-serif; 
+            display: flex; flex-direction: column; 
+            height: 100vh; background-color: var(--dark-gray); color: white; 
+            overflow: hidden; /* 전체 화면 스크롤 방지 */
+            -webkit-user-select: none; /* 텍스트 선택 방지 */
+        }
+        
+        /* 헤더 스타일 */
+        #header { 
+            padding: 15px 20px; 
+            background: linear-gradient(135deg, var(--primary-bg) 0%, #2980b9 100%); 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100;
+        }
+        #header h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        
+        /* 일자/장소 입력창 영역 */
+        #inputs {
+            padding: 15px 20px;
+            background: var(--dark-gray);
+            border-bottom: 1px solid var(--medium-gray);
+            z-index: 90;
+        }
+        #inputs input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: all 0.3s;
+        }
+        #inputs input:focus {
+            outline: none;
+            border-color: var(--secondary-bright);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        #inputs input:last-child { margin-bottom: 0; }
+
+        /* 지도 영역 */
+        #map { flex: 1; width: 100%; z-index: 1; border-top: 1px solid var(--medium-gray); }
+
+        /* 텍스트 로그 기록창 (지도 아래) */
+        #log-container { 
+            height: 25vh; /* 화면의 25% 차지 */
+            overflow-y: auto; background: var(--dark-gray); 
+            padding: 10px 15px; border-top: 1px solid var(--medium-gray);
+            display: flex; flex-direction: column;
+        }
+        #logsDiv h2 { font-size: 14px; color: var(--light-gray); text-transform: uppercase; margin: 10px 0; letter-spacing: 1px; }
+        .log-entry { font-size: 14px; padding: 10px 15px; border-radius: 8px; background: var(--log-bg); border: 1px solid transparent; transition: background 0.3s; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;}
+        .log-entry:last-child { margin-bottom: 0; }
+        .log-content { display: flex; align-items: center; }
+        .log-index { color: var(--secondary-bright); font-weight: bold; margin-right: 12px; font-size: 13px;}
+        .log-time { font-weight: bold; color: var(--light-gray); font-size: 13px; }
+        .log-text { color: white; margin-top: 2px; }
+        .log-coord { font-size: 11px; color: var(--light-gray); text-align: right; }
+
+        /* 하단 조작 버튼 영역 (앱 바 형태로 고정) */
+        #controls { 
+            display: flex; padding: 15px 15px; background: var(--primary-bg);
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
+            /* 아이폰 하단 홈 바 및 상단 노치 영역 침범 방지 */
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        button { 
+            flex: 1; margin: 0 5px; padding: 18px 0; 
+            font-size: 16px; font-weight: 800; border-radius: 12px; 
+            border: none; color: white; cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        button:active { transform: scale(0.96); opacity: 0.8; }
+        button .btn-icon { font-size: 20px; margin-bottom: 4px; }
+        
+        #btn-start { background: linear-gradient(135deg, #16a085 0%, #27ae60 100%); }
+        #btn-record { background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); }
+        #btn-end { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%); }
+        button:disabled { background: linear-gradient(135deg, var(--light-gray) 0%, var(--medium-gray) 100%); color: rgba(255, 255, 255, 0.4); pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div id="header">
-        <span>⛰️ 등산 기록</span>
-        <button id="btn-export">엑셀 저장</button>
+        <h1>나의 등산 기록 (Hike Log)</h1>
+    </div>
+
+    <div id="inputs">
+        <input type="text" id="hike-date" placeholder="등산 일자 (예: 2026.06.09 화)">
+        <input type="text" id="hike-location" placeholder="등산 장소 (예: 지리산 - 대나무숲 코스)">
     </div>
 
     <div id="map"></div>
 
     <div id="log-container">
-        <div id="logs"></div>
+        <div id="logsDiv">
+            <h2>기록 리스트</h2>
+            <div id="logs" style="color: var(--light-gray); text-align: center; margin-top: 20px; font-size: 14px;">출발 버튼을 누르면 기록이 시작됩니다.</div>
+        </div>
     </div>
 
     <div id="controls">
-        <button id="btn-start">🚀 출발</button>
-        <button id="btn-record" disabled>📍 기록</button>
-        <button id="btn-end" disabled>🏁 종료</button>
+        <button id="btn-start"><span class="btn-icon">🚀</span>출발 (Start)</button>
+        <button id="btn-record" disabled><span class="btn-icon">📍</span>시간기록 (Log Point)</button>
+        <button id="btn-end" disabled><span class="btn-icon">🏁</span>종료 (End)</button>
     </div>
 
     <script>
@@ -51,28 +141,26 @@
         let routeCoords = [];
         let routeLine = L.polyline(routeCoords, {color: '#e74c3c', weight: 4}).addTo(map);
         
-        let hikeLogs = []; // 기록을 담을 배열
+        let hikeLogs = []; 
 
         const btnStart = document.getElementById('btn-start');
         const btnRecord = document.getElementById('btn-record');
         const btnEnd = document.getElementById('btn-end');
-        const btnExport = document.getElementById('btn-export');
         const logsDiv = document.getElementById('logs');
+        const dateInput = document.getElementById('hike-date');
+        const locationInput = document.getElementById('hike-location');
 
-        // 시작 시 브라우저에 저장된 이전 기록 불러오기
         window.onload = () => {
-            const savedLogs = localStorage.getItem('hikeLogs');
+            const savedLogs = localStorage.getItem('hikeLogs_v2');
             if (savedLogs) {
-                hikeLogs = JSON.parse(savedLogs);
+                const savedData = JSON.parse(savedLogs);
+                dateInput.value = savedData.date || '';
+                locationInput.value = savedData.location || '';
+                hikeLogs = savedData.logs || [];
                 renderLogs();
-                // 저장된 기록이 있고 종료되지 않았다면 버튼 상태 복구
                 if (hikeLogs.length > 0 && hikeLogs[hikeLogs.length - 1].type !== '종료') {
-                    btnStart.disabled = true;
-                    btnRecord.disabled = false;
-                    btnEnd.disabled = false;
+                    btnStart.disabled = true; btnRecord.disabled = false; btnEnd.disabled = false;
                 }
-            } else {
-                logsDiv.innerHTML = '<div style="color:#95a5a6; text-align:center; margin-top:10px; font-size:14px;">출발 버튼을 누르면 기록이 시작됩니다.</div>';
             }
 
             if(navigator.geolocation) {
@@ -97,31 +185,47 @@
             routeLine.setLatLngs(routeCoords);
         }
 
-        // 기록 화면 표시 및 브라우저 저장
+        function saveData() {
+            const dataToSave = {
+                date: dateInput.value,
+                location: locationInput.value,
+                logs: hikeLogs
+            };
+            localStorage.setItem('hikeLogs_v2', JSON.stringify(dataToSave));
+        }
+
         function saveRecord(type, lat = "", lng = "") {
             const time = getCurrentTime();
             const logItem = { type, time, lat, lng };
-            
-            // 기존 기록을 지우고 새로 시작 (새로운 '출발'일 경우)
             if (type === '출발' && hikeLogs.length > 0 && hikeLogs[hikeLogs.length - 1].type === '종료') {
                 hikeLogs = [];
                 routeCoords = [];
             }
-            
             hikeLogs.push(logItem);
-            localStorage.setItem('hikeLogs', JSON.stringify(hikeLogs)); // 스마트폰에 저장
+            saveData(); 
             renderLogs();
         }
 
-        // 화면에 기록 그리기
         function renderLogs() {
+            if (hikeLogs.length === 0) {
+                logsDiv.innerHTML = '<div style="color: var(--light-gray); text-align: center; margin-top: 20px; font-size: 14px;">출발 버튼을 누르면 기록이 시작됩니다.</div>';
+                return;
+            }
             logsDiv.innerHTML = '';
-            // 최신 기록이 위로 오도록 역순 출력
-            [...hikeLogs].reverse().forEach(log => {
+            [...hikeLogs].reverse().forEach((log, index) => {
                 const logEntry = document.createElement('div');
                 logEntry.className = 'log-entry';
                 const coordText = (log.lat && log.lng) ? `<div class="log-coord">${log.lat}, ${log.lng}</div>` : '';
-                logEntry.innerHTML = `<div><span class="log-time">[${log.type}]</span> ${log.time}</div> ${coordText}`;
+                logEntry.innerHTML = `
+                    <div class="log-content">
+                        <div class="log-index">${hikeLogs.length - index}</div>
+                        <div>
+                            <div class="log-time">[${log.time}]</div>
+                            <div class="log-text">${log.type} 지점</div>
+                        </div>
+                    </div>
+                    ${coordText}
+                `;
                 logsDiv.appendChild(logEntry);
             });
         }
@@ -135,7 +239,7 @@
                     updateMap(lat, lng);
                     saveRecord(type, lat, lng);
                 },
-                (error) => alert("GPS 신호를 잡을 수 없습니다."),
+                (error) => alert("GPS 신호를 잡을 수 없습니다 탁 트인 곳으로 이동해 주세요."),
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
@@ -146,8 +250,7 @@
         });
 
         btnRecord.addEventListener('click', () => {
-            btnRecord.disabled = true;
-            fetchLocationAndRecord('기록');
+            btnRecord.disabled = true; fetchLocationAndRecord('기록');
             setTimeout(() => { btnRecord.disabled = false; }, 2000);
         });
 
@@ -158,30 +261,10 @@
             }
         });
 
-        // 엑셀(CSV) 다운로드 기능
-        btnExport.addEventListener('click', () => {
-            if (hikeLogs.length === 0) return alert("저장된 기록이 없습니다.");
-            
-            let csvContent = "\uFEFF"; // 한글 깨짐 방지(BOM)
-            csvContent += "구분,시간,위도,경도\n";
-            
-            hikeLogs.forEach(log => {
-                csvContent += `${log.type},${log.time},${log.lat},${log.lng}\n`;
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            
-            // 파일명에 오늘 날짜 추가
-            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            link.setAttribute("download", `등산기록_${today}.csv`);
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        // 일자/장소 입력창 변경 시에도 저장
+        [dateInput, locationInput].forEach(input => {
+            input.addEventListener('input', saveData);
         });
     </script>
 </body>
-</html> 
+</html>

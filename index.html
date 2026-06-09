@@ -1044,50 +1044,49 @@ function renderStats(){
         return {date:h.date,loc:h.location||'미입력',dist,totalMin,moveMin,restMin};
     });
 
-    // 상단 KPI
+    /* ── 누적 / 평균 ── */
     const totalDist=hikesData.reduce((s,h)=>s+h.dist,0);
     const totalTimeMin=hikesData.reduce((s,h)=>s+h.totalMin,0);
     const totalTimeHr=Math.round(totalTimeMin/60);
+    const avgDist=(totalDist/all.length);
+    const avgTimeMin=Math.round(totalTimeMin/all.length);
+
+    /* ── 이번 달 ── */
+    const _now=new Date();
+    const thisYM=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
+    const thisMonthCnt=hikesData.filter(h=>h.date&&h.date.startsWith(thisYM)).length;
+
+    /* ── 평균 페이스 (이동시간 기준, moveMin>0인 것만) ── */
+    const paceHikes=hikesData.filter(h=>h.moveMin>0&&h.dist>0);
+    const avgPace=paceHikes.length>0
+        ? paceHikes.reduce((s,h)=>s+(h.dist/(h.moveMin/60)),0)/paceHikes.length
+        : 0;
+
+    /* ── 최고 기록 ── */
     const maxDist=hikesData.reduce((a,b)=>b.dist>a.dist?b:a,hikesData[0]);
     const maxTime=hikesData.reduce((a,b)=>b.totalMin>a.totalMin?b:a,hikesData[0]);
 
-    // 자주 간 산 (도넛 그래프용)
+    /* ── 자주 간 산 + 총 산 개수 ── */
     const locMap={};
     hikesData.forEach(h=>{locMap[h.loc]=(locMap[h.loc]||0)+1;});
+    const uniqueMtnCnt=Object.keys(locMap).filter(k=>k!=='미입력').length;
     const topLocs=Object.entries(locMap).sort((a,b)=>b[1]-a[1]);
-    const donutColors=['#2E7D55', '#4CAF7D', '#E09820', '#4A90D9', '#8C9EFF'];
-    let donutStops=[], donutLegend='', dDeg=0, topSum=0;
-    const top4 = topLocs.slice(0, 4);
-    
-    top4.forEach((loc, i) => { topSum += loc[1]; });
-    if(all.length > topSum) top4.push(['기타', all.length - topSum]); // 5번째는 '기타'로 묶음
-
-    top4.forEach((loc, i) => {
-        const pct = (loc[1] / all.length) * 100;
-        donutStops.push(`${donutColors[i]} ${dDeg}% ${dDeg + pct}%`);
-        dDeg += pct;
-        donutLegend += `<div style="display:flex;align-items:center;font-size:12px;color:var(--text-dim);margin-bottom:6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${donutColors[i]};margin-right:8px;flex-shrink:0;"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${loc[0]}</span><b style="color:var(--text);margin-left:4px;">${loc[1]}회</b></div>`;
+    const donutColors=['#2E7D55','#4CAF7D','#E09820','#4A90D9','#8C9EFF'];
+    let donutStops=[],donutLegend='',dDeg=0,topSum=0;
+    const top4=topLocs.slice(0,4);
+    top4.forEach(loc=>{topSum+=loc[1];});
+    if(all.length>topSum) top4.push(['기타',all.length-topSum]);
+    top4.forEach((loc,i)=>{
+        const pct=(loc[1]/all.length)*100;
+        donutStops.push(`${donutColors[i]} ${dDeg}% ${dDeg+pct}%`);
+        dDeg+=pct;
+        donutLegend+=`<div style="display:flex;align-items:center;font-size:13px;color:var(--text-dim);margin-bottom:7px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${donutColors[i]};margin-right:9px;flex-shrink:0;"></span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${loc[0]}</span><b style="color:var(--text);margin-left:6px;flex-shrink:0;">${loc[1]}회</b></div>`;
     });
-    const donutStyle = `background: conic-gradient(${donutStops.join(', ')}); border-radius: 50%; width: 110px; height: 110px; position: relative; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);`;
-    const holeStyle = `background: white; border-radius: 50%; width: 66px; height: 66px; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);`;
+    const donutStyle=`background:conic-gradient(${donutStops.join(',')});border-radius:50%;width:110px;height:110px;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
+    const holeStyle=`background:white;border-radius:50%;width:66px;height:66px;display:flex;align-items:center;justify-content:center;flex-direction:column;`;
 
-    // 요일별 집계 (원그래프용 - 주말 vs 평일)
-    const weekday=Array(7).fill(0);
-    hikesData.forEach(h=>{if(h.date){const d=new Date(h.date).getDay();weekday[d]++;}});
-    const weekendCnt = weekday[0] + weekday[6];
-    const weekdayCnt = all.length - weekendCnt;
-    const pieData = [{name: '주말 (토·일)', count: weekendCnt, color: '#E09820'}, {name: '평일', count: weekdayCnt, color: '#4CAF7D'}].filter(d => d.count > 0);
-    let pieStops=[], pDeg=0, pieLegend='';
-    pieData.forEach(d => {
-        const pct = (d.count / all.length) * 100;
-        pieStops.push(`${d.color} ${pDeg}% ${pDeg + pct}%`);
-        pDeg += pct;
-        pieLegend += `<div style="display:flex;align-items:center;font-size:13px;color:var(--text-dim);margin-bottom:8px;"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${d.color};margin-right:8px;"></span><span style="flex:1;">${d.name}</span><b style="color:var(--text)">${d.count}회</b> <span style="margin-left:5px;font-size:11px;">(${Math.round(pct)}%)</span></div>`;
-    });
-    const pieStyle = `background: conic-gradient(${pieStops.join(', ')}); border-radius: 50%; width: 100px; height: 100px; flex-shrink:0; box-shadow: 0 2px 8px rgba(0,0,0,0.08);`;
-
-    // 월별 집계 (막대그래프용)
-    const thisYear=String(new Date().getFullYear());
+    /* ── 월별 집계 ── */
+    const thisYear=String(_now.getFullYear());
     const monthly=Array(12).fill(0);
     hikesData.forEach(h=>{
         if(h.date&&h.date.startsWith(thisYear)){
@@ -1097,70 +1096,108 @@ function renderStats(){
     });
     const maxMo=Math.max(...monthly,1);
 
-    // 활동 캘린더
+    /* ── 활동 캘린더 (잔디) — 7행×52열 정렬 ──
+       오늘이 포함된 주의 일요일(=열 마지막)을 기준으로
+       52주(364일) + 현재 주 남은 일수로 셀을 채운다.
+       grid는 column-first(세로 먼저) 방식으로 7행×52열 배치.          */
     const calDates=new Set(hikesData.map(h=>h.date));
-    const today=new Date(); const cal=[];
-    for(let i=363;i>=0;i--){
-        const d=new Date(today); d.setDate(d.getDate()-i);
-        cal.push({date:d.toISOString().split('T')[0],hiked:calDates.has(d.toISOString().split('T')[0])});
+    function localDateStr(d){
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
+    /* 오늘 기준 직전 일요일(=이번 주 시작)부터 364일 전 일요일까지 */
+    const todayD=new Date(_now.getFullYear(),_now.getMonth(),_now.getDate());
+    const todayDow=todayD.getDay(); /* 0=일 ~ 6=토 */
+    /* 그리드 시작일: 52주 전 일요일 */
+    const gridStart=new Date(todayD);
+    gridStart.setDate(gridStart.getDate()-todayDow-51*7);
+    /* 셀 총 개수: 52주×7 = 364, 거기에 이번 주 오늘까지 todayDow+1칸 추가 → 364+todayDow+1 */
+    const totalCells=364+todayDow+1;
+    const calCells=[];
+    for(let i=0;i<totalCells;i++){
+        const d=new Date(gridStart);
+        d.setDate(d.getDate()+i);
+        const ds=localDateStr(d);
+        calCells.push({date:ds,hiked:calDates.has(ds),future:d>todayD});
+    }
+    /* 열 수: Math.ceil(totalCells/7) */
+    const calCols=Math.ceil(totalCells/7);
+    const DOW_LBL=['일','월','화','수','목','금','토'];
 
     /* ── 렌더링 ── */
     sc.innerHTML=`
     <style>
-    .st-sec { background:white; border-radius:16px; padding:18px 16px; margin-bottom:14px; box-shadow:0 1px 8px rgba(0,0,0,0.04); }
-    .st-sec-title { font-size:14px; font-weight:800; color:var(--text); margin-bottom:16px; display:flex; justify-content:space-between; align-items:flex-end; }
-    
-    .st-kpi { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
-    .st-kpi-card { background:white; border-radius:14px; padding:16px 10px; box-shadow:0 1px 8px rgba(0,0,0,0.04); text-align:center; }
-    .st-kpi-val { font-size:22px; font-weight:800; color:var(--text); font-variant-numeric: tabular-nums; }
-    .st-kpi-lbl { font-size:12px; font-weight:600; color:var(--text-dim); margin-top:4px; }
-    
-    .chart-box { display:flex; align-items:center; gap:24px; padding:0 4px; }
-    .chart-legend { flex:1; display:flex; flex-direction:column; justify-content:center; min-width:0; }
-    
-    .st-bar-row { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
-    .st-bar-lbl { font-size:12px; color:var(--text-dim); width:24px; text-align:center; flex-shrink:0; font-weight:600; }
-    .st-bar-bg { flex:1; height:10px; background:rgba(0,0,0,0.04); border-radius:5px; overflow:hidden; }
-    .st-bar-fill { height:100%; border-radius:5px; background:var(--green); transition:width 0.4s; }
-    .st-bar-cnt { font-size:12px; font-weight:700; color:var(--text-dim); width:18px; text-align:right; flex-shrink:0; }
-    
-    .rec-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
-    .rec-item:last-child { border-bottom:none; padding-bottom:0; }
-    .rec-left { display:flex; flex-direction:column; gap:2px; }
-    .rec-lbl { font-size:13px; font-weight:600; color:var(--text-dim); }
-    .rec-sub { font-size:11px; color:#A0AABA; }
-    .rec-val { font-size:16px; font-weight:800; color:var(--green); }
-    
-    .cal-grid { display:grid; grid-template-columns:repeat(52,1fr); gap:2px; margin-top:6px; }
-    .cal-cell { aspect-ratio:1; border-radius:2px; background:rgba(0,0,0,0.05); }
-    .cal-cell.on { background:var(--green); }
+    .st-sec{background:white;border-radius:16px;padding:18px 16px;margin-bottom:14px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
+    .st-sec-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;}
+    .st-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
+    .st-kpi2{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+    .st-kpi-card{background:white;border-radius:14px;padding:14px 8px;box-shadow:0 1px 8px rgba(0,0,0,0.04);text-align:center;}
+    .st-kpi-val{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+    .st-kpi-lbl{font-size:11px;font-weight:600;color:var(--text-dim);margin-top:4px;}
+    .st-kpi-sub{font-size:10px;color:var(--text-dim);margin-top:2px;opacity:0.7;}
+    .chart-box{display:flex;align-items:center;gap:20px;padding:0 2px;}
+    .chart-legend{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+    .st-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+    .st-bar-lbl{font-size:12px;color:var(--text-dim);width:26px;text-align:right;flex-shrink:0;font-weight:600;}
+    .st-bar-bg{flex:1;height:10px;background:rgba(0,0,0,0.04);border-radius:5px;overflow:hidden;}
+    .st-bar-fill{height:100%;border-radius:5px;background:var(--green);}
+    .st-bar-cnt{font-size:12px;font-weight:700;color:var(--text);width:20px;text-align:right;flex-shrink:0;}
+    .rec-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+    .rec-item:last-child{border-bottom:none;padding-bottom:0;}
+    .rec-left{display:flex;flex-direction:column;gap:2px;}
+    .rec-lbl{font-size:13px;font-weight:600;color:var(--text-dim);}
+    .rec-sub{font-size:11px;color:#A0AABA;}
+    .rec-val{font-size:16px;font-weight:800;color:var(--green);}
+    .cal-wrap{display:flex;gap:4px;align-items:flex-start;margin-top:4px;}
+    .cal-dow{display:grid;grid-template-rows:repeat(7,1fr);gap:2px;flex-shrink:0;}
+    .cal-dow-lbl{font-size:9px;color:var(--text-dim);height:11px;display:flex;align-items:center;font-weight:600;}
+    .cal-grid{display:grid;gap:2px;flex:1;min-width:0;}
+    .cal-cell{width:100%;aspect-ratio:1;border-radius:2px;background:rgba(0,0,0,0.05);}
+    .cal-cell.on{background:var(--green);}
+    .cal-cell.future{background:transparent;}
     </style>
 
     <div class="st-kpi">
-        <div class="st-kpi-card"><div class="st-kpi-val">${all.length}</div><div class="st-kpi-lbl">총 산행(회)</div></div>
-        <div class="st-kpi-card"><div class="st-kpi-val">${totalDist.toFixed(1)}</div><div class="st-kpi-lbl">총 거리(km)</div></div>
-        <div class="st-kpi-card"><div class="st-kpi-val">${totalTimeHr}</div><div class="st-kpi-lbl">총 시간(h)</div></div>
+        <div class="st-kpi-card">
+            <div class="st-kpi-val">${all.length}</div>
+            <div class="st-kpi-lbl">총 산행(회)</div>
+        </div>
+        <div class="st-kpi-card">
+            <div class="st-kpi-val">${totalDist.toFixed(1)}</div>
+            <div class="st-kpi-lbl">총 거리(km)</div>
+        </div>
+        <div class="st-kpi-card">
+            <div class="st-kpi-val">${totalTimeHr}</div>
+            <div class="st-kpi-lbl">총 시간(h)</div>
+        </div>
     </div>
-
-    <div class="st-sec">
-        <div class="st-sec-title">자주 찾은 산 TOP 5</div>
-        <div class="chart-box">
-            <div style="${donutStyle}">
-                <div style="${holeStyle}">
-                    <span style="font-size:11px;color:var(--text-dim);font-weight:600;">총 방문</span>
-                    <span style="font-size:16px;font-weight:800;color:var(--text);">${all.length}</span>
-                </div>
-            </div>
-            <div class="chart-legend">${donutLegend}</div>
+    <div class="st-kpi2">
+        <div class="st-kpi-card">
+            <div class="st-kpi-val">${avgDist.toFixed(1)}</div>
+            <div class="st-kpi-lbl">평균 거리(km)</div>
+            <div class="st-kpi-sub">1회 평균</div>
+        </div>
+        <div class="st-kpi-card">
+            <div class="st-kpi-val">${Math.floor(avgTimeMin/60)}h${avgTimeMin%60>0?` ${avgTimeMin%60}m`:''}</div>
+            <div class="st-kpi-lbl">평균 시간</div>
+            <div class="st-kpi-sub">1회 평균</div>
+        </div>
+        <div class="st-kpi-card">
+            <div class="st-kpi-val">${thisMonthCnt}</div>
+            <div class="st-kpi-lbl">이번 달(회)</div>
+            <div class="st-kpi-sub">${_now.getMonth()+1}월</div>
         </div>
     </div>
 
     <div class="st-sec">
-        <div class="st-sec-title">요일별 비중</div>
+        <div class="st-sec-title">자주 찾은 산 <span style="font-size:12px;font-weight:500;color:var(--text-dim);">총 ${uniqueMtnCnt}개 산 방문</span></div>
         <div class="chart-box">
-            <div style="${pieStyle}"></div>
-            <div class="chart-legend">${pieLegend}</div>
+            <div style="${donutStyle}">
+                <div style="${holeStyle}">
+                    <span style="font-size:10px;color:var(--text-dim);font-weight:600;">총 방문</span>
+                    <span style="font-size:16px;font-weight:800;color:var(--text);">${all.length}</span>
+                </div>
+            </div>
+            <div class="chart-legend">${donutLegend}</div>
         </div>
     </div>
 
@@ -1180,22 +1217,40 @@ function renderStats(){
             </div>
             <span class="rec-val">${Math.floor(maxTime.totalMin/60)}h ${maxTime.totalMin%60}m</span>
         </div>
+        ${avgPace>0?`
+        <div class="rec-item">
+            <div class="rec-left">
+                <span class="rec-lbl">평균 페이스</span>
+                <span class="rec-sub">이동시간 기준 (휴식 제외)</span>
+            </div>
+            <span class="rec-val">${avgPace.toFixed(1)} km/h</span>
+        </div>`:''}
     </div>
 
     <div class="st-sec">
         <div class="st-sec-title">${thisYear}년 월별 추이</div>
-        ${monthly.map((cnt,i)=>`
+        ${monthly.map((cnt,i)=>cnt===0?`
         <div class="st-bar-row">
             <div class="st-bar-lbl">${i+1}월</div>
-            <div class="st-bar-bg"><div class="st-bar-fill" style="width:${cnt===0?'2px':Math.round(cnt/maxMo*100)+'%'}"></div></div>
-            <div class="st-bar-cnt">${cnt||''}</div>
+            <div class="st-bar-bg"></div>
+            <div class="st-bar-cnt" style="color:var(--text-dim);opacity:0.35;">-</div>
+        </div>`:
+        `<div class="st-bar-row">
+            <div class="st-bar-lbl">${i+1}월</div>
+            <div class="st-bar-bg"><div class="st-bar-fill" style="width:${Math.round(cnt/maxMo*100)}%"></div></div>
+            <div class="st-bar-cnt">${cnt}</div>
         </div>`).join('')}
     </div>
 
     <div class="st-sec">
         <div class="st-sec-title">활동 캘린더 <span style="font-size:11px;font-weight:500;color:var(--text-dim);">(최근 1년)</span></div>
-        <div class="cal-grid">
-            ${cal.map(c=>`<div class="cal-cell${c.hiked?' on':''}" title="${c.date}"></div>`).join('')}
+        <div class="cal-wrap">
+            <div class="cal-dow">
+                ${DOW_LBL.map(d=>`<div class="cal-dow-lbl">${d}</div>`).join('')}
+            </div>
+            <div class="cal-grid" style="grid-template-rows:repeat(7,11px);grid-template-columns:repeat(${calCols},1fr);grid-auto-flow:column;">
+                ${calCells.map(c=>`<div class="cal-cell${c.hiked?' on':''}${c.future?' future':''}" title="${c.date}"></div>`).join('')}
+            </div>
         </div>
         <div style="display:flex;align-items:center;gap:5px;margin-top:10px;justify-content:flex-end;">
             <div style="width:10px;height:10px;border-radius:2px;background:rgba(0,0,0,0.05)"></div>
@@ -1251,8 +1306,10 @@ function doNewHike(){
     if(curHike.logs.length===0) return alert('저장할 기록이 없습니다.');
     if(!confirm('현재 기록을 보관함에 저장하고 새 산행을 시작합니까?')) return;
     _archiveCurrentHike();
-    curHike={date:$dateInp.value,location:'',logs:[]};
-    localStorage.removeItem('hikeApp_current'); $locInp.value='';
+    const _nd=new Date(); const _ndStr=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
+    $dateInp.value=_ndStr; $locInp.value='';
+    curHike={date:_ndStr,location:'',logs:[]};
+    localStorage.removeItem('hikeApp_current');
     resetHike(); stopTimer(); setActive(false);
     $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block';
     refreshStats(); closeLogSheet();
@@ -1263,8 +1320,8 @@ $start.addEventListener('click',()=>{
     if(curHike.logs.length>0){
         if(!confirm('이전 기록이 있습니다. 보관함에 저장하고 새로 시작합니까?')) return;
         _archiveCurrentHike();
-        curHike={date:$dateInp.value,location:'',logs:[]};
-        localStorage.removeItem('hikeApp_current'); $locInp.value='';
+        curHike={date:$dateInp.value,location:$locInp.value,logs:[]};
+        localStorage.removeItem('hikeApp_current');
         resetHike(); $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block'; refreshStats();
     }
     setActive(true); startTimer(); lastMoveT=Date.now();
@@ -1571,7 +1628,7 @@ function setTrackModeWithCheck(mode) {
 
 /* ══ 초기화 ══ */
 window.onload=()=>{
-    $dateInp.value=new Date().toISOString().split('T')[0];
+    const _today=new Date(); $dateInp.value=`${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
     const savedRt=localStorage.getItem('hikeApp_rtCoords');
     if(savedRt) try{savedRtCoords=JSON.parse(savedRt);}catch(e){}
     const savedMode=localStorage.getItem('hikeApp_trackMode')||'manual';

@@ -342,34 +342,36 @@ body {
 
 /* ══ 지도 위 레이어 버튼 ══ */
 #map-layer-btn {
-    position:absolute; bottom:calc(var(--sab) + 96px); right:16px; z-index:10;
+    position:absolute; right:16px; z-index:10;
     width:42px; height:42px; border-radius:13px;
     background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border:1px solid var(--border); box-shadow:var(--shadow-sm);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer; font-size:13px; font-weight:700; color:var(--text);
-    transition:transform 0.12s;
+    transition:bottom 0.35s cubic-bezier(0.32,0.72,0,1), transform 0.12s;
 }
 #map-layer-btn:active { transform:scale(0.92); }
 
 #btn-myloc {
-    position:absolute; bottom:calc(var(--sab) + 148px); right:16px; z-index:10;
+    position:absolute; right:16px; z-index:10;
     width:42px; height:42px; border-radius:13px;
     background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border:1px solid var(--border); box-shadow:var(--shadow-sm);
     display:flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:transform 0.12s;
+    cursor:pointer;
+    transition:bottom 0.35s cubic-bezier(0.32,0.72,0,1), transform 0.12s;
 }
 #btn-myloc:active { transform:scale(0.92); }
 
 /* 기록 보기 버튼 (지도 위) */
 #btn-show-logs {
-    position:absolute; bottom:calc(var(--sab) + 200px); right:16px; z-index:10;
+    position:absolute; right:16px; z-index:10;
     width:42px; height:42px; border-radius:13px;
     background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border:1px solid var(--border); box-shadow:var(--shadow-sm);
     display:none; align-items:center; justify-content:center;
-    cursor:pointer; font-size:18px; transition:transform 0.12s;
+    cursor:pointer; font-size:18px;
+    transition:bottom 0.35s cubic-bezier(0.32,0.72,0,1), transform 0.12s;
 }
 #btn-show-logs.show { display:flex; }
 #btn-show-logs:active { transform:scale(0.92); }
@@ -639,7 +641,7 @@ function alignBody(){
     document.body.style.left=o+'px'; document.body.style.right=o+'px';
 }
 alignBody();
-window.addEventListener('resize',()=>{alignBody();map.invalidateSize();});
+window.addEventListener('resize',()=>{alignBody();map.invalidateSize();updateMapBtnPositions();});
 
 /* ══ 상태 ══ */
 let curMarker=null, locDot=null, locCircle=null;
@@ -907,6 +909,21 @@ function onPauseClick(){if(!isPaused)doPause();else doResume();}
 let userDragged=false;
 map.on('dragstart',()=>{userDragged=true;});
 
+/* ══ 지도 위 버튼 위치 동적 계산 ══
+   바텀바 실제 높이를 측정해 버튼들이 항상 바텀바 바로 위에 오도록 조정.
+   GAP: 버튼 간격 52px (버튼 42px + 여백 10px) */
+function updateMapBtnPositions(){
+    const bar = document.getElementById('bottom-bar');
+    if(!bar) return;
+    const barH = bar.offsetHeight;
+    const sab  = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab')||'0')||0;
+    const base = barH + sab + 10;   /* 바텀바 상단 + 10px 여백 */
+    const GAP  = 52;
+    document.getElementById('map-layer-btn').style.bottom = base + 'px';
+    document.getElementById('btn-myloc').style.bottom     = (base + GAP) + 'px';
+    document.getElementById('btn-show-logs').style.bottom = (base + GAP * 2) + 'px';
+}
+
 function setActive(on){
     $statusDot.className=on?'active':'';
     $ctrlIdle.style.display=on?'none':'flex';
@@ -917,7 +934,9 @@ function setActive(on){
     document.getElementById('btn-mode-manual').disabled=on;
     document.getElementById('btn-mode-realtime').disabled=on;
     document.getElementById('dd-new').style.display=(!on&&curHike.logs.length>0)?'flex':'none';
-    setTimeout(()=>map.invalidateSize(),50);
+    /* 바텀바 높이가 바뀌므로 transition 끝난 뒤 버튼 위치 재계산 */
+    setTimeout(()=>{ map.invalidateSize(); updateMapBtnPositions(); }, 50);
+    setTimeout(updateMapBtnPositions, 380); /* transition(0.35s) 완료 후 한 번 더 */
 }
 
 /* ══ 지도 마커 ══ */
@@ -1758,12 +1777,19 @@ window.onload=()=>{
         } else setActive(false);
     } else {
         setActive(false);
+    }
+
+    /* 현재 위치 자동 이동 — 저장된 경로 없을 때만 */
+    if(!scParsed || routeCoords.length === 0){
         navigator.geolocation&&navigator.geolocation.getCurrentPosition(
-            pos=>map.setView([pos.coords.latitude,pos.coords.longitude],15),
-            ()=>{},{enableHighAccuracy:false}
+            pos=>{ map.setView([pos.coords.latitude,pos.coords.longitude],15); },
+            ()=>{},{enableHighAccuracy:false,timeout:6000}
         );
     }
+
     refreshStats();
+    /* 버튼 초기 위치 계산 — DOM 렌더 완료 후 */
+    setTimeout(updateMapBtnPositions, 0);
 
     /* 첫 실행 시 한계 안내 */
     if(!localStorage.getItem('hikeApp_seenFirstRun')) {

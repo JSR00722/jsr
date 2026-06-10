@@ -265,96 +265,6 @@ body {
 }
 .btn-del:active { color:var(--danger); }
 
-
-/* ══ 보관함 경로 미리보기 ══ */
-let previewLayers = [];   /* 미리보기 전용 레이어 배열 */
-
-function clearPreview(){
-    previewLayers.forEach(l => map.removeLayer(l));
-    previewLayers = [];
-    document.getElementById('preview-badge').classList.remove('show');
-}
-
-window.showHistoryOnMap = function(idx){
-    const hike = hikeHistory[idx];
-    if(!hike) return;
-
-    /* 산행 중에는 미리보기 불가 */
-    if($ctrlAct.classList.contains('show')){
-        alert('산행 중에는 이전 경로를 볼 수 없습니다.');
-        return;
-    }
-
-    clearPreview();
-    closeHistory();
-
-    const hasRt  = hike.rtCoords && hike.rtCoords.length > 1;
-    const logPts = hike.logs.filter(l => l.lat && l.lng);
-
-    /* ── 실시간 경로선 ── */
-    if(hasRt){
-        const coords = hike.rtCoords.map(c => [c.la, c.lo]);
-        const line = L.polyline(coords, {
-            color:'#E09820', weight:4, opacity:0.85, dashArray:'8 5'
-        }).addTo(map);
-        previewLayers.push(line);
-        map.fitBounds(line.getBounds(), {padding:[40,40]});
-    }
-
-    /* ── 수동 기록 지점 마커 ── */
-    logPts.forEach(log => {
-        const isStart = log.type === '출발';
-        const isEnd   = log.type === '종료';
-        const color   = isStart ? '#4CAF7D' : isEnd ? '#E05252' : '#4A90D9';
-        const icon = L.divIcon({
-            className:'',
-            html:`<div style="
-                width:${isStart||isEnd?14:10}px;
-                height:${isStart||isEnd?14:10}px;
-                border-radius:50%;
-                background:${color};
-                border:2.5px solid white;
-                box-shadow:0 1px 6px rgba(0,0,0,0.3);
-            "></div>`,
-            iconSize:[isStart||isEnd?14:10, isStart||isEnd?14:10],
-            iconAnchor:[isStart||isEnd?7:5, isStart||isEnd?7:5]
-        });
-        const marker = L.marker([+log.lat, +log.lng], {icon}).addTo(map);
-        /* 팝업 */
-        const memo = log.memo || {출발:'출발',종료:'종료',기록:'기록 지점',일시정지:'일시정지',재개:'재개'}[log.type] || '';
-        marker.bindPopup(`<b>${log.type}</b> ${log.time}<br><span style="color:#6B7A8D;font-size:12px;">${memo}</span>`, {
-            closeButton:false, className:'preview-popup'
-        });
-        previewLayers.push(marker);
-    });
-
-    /* rtCoords만 있고 logPts 없을 때 지도 범위 */
-    if(!hasRt && logPts.length > 0){
-        const lats = logPts.map(l => +l.lat);
-        const lngs = logPts.map(l => +l.lng);
-        if(lats.length === 1){
-            map.setView([lats[0], lngs[0]], 15);
-        } else {
-            map.fitBounds([
-                [Math.min(...lats), Math.min(...lngs)],
-                [Math.max(...lats), Math.max(...lngs)]
-            ], {padding:[40,40]});
-        }
-    }
-
-    /* 배지 표시 */
-    const badge = document.getElementById('preview-badge');
-    const name  = document.getElementById('preview-pill-name');
-    name.textContent = (hike.location || '이름없음') + ' ' + (hike.date || '');
-    badge.classList.add('show');
-
-    /* 데이터 없으면 안내 */
-    if(!hasRt && logPts.length === 0){
-        clearPreview();
-        alert('표시할 좌표 데이터가 없습니다.');
-    }
-};
-
 /* ══ 이력 패널 ══ */
 #history-panel {
     position:fixed; inset:0; z-index:700; background:rgba(0,0,0,0.4);
@@ -1960,7 +1870,7 @@ const LIMIT_CONFIGS = {
     realtimeMode: {
         icon: '📡',
         title: '실시간 추적의 한계',
-        body: '실시간 모드는 GPS를 상시 사용합니다.\n아래 사항을 반드시 확인하세요.',
+        body: '실시간 모드는 GPS 상시 사용합니다.\n아래 사항을 반드시 확인하세요.',
         items: [
             { warn: true,  text: '경로 좌표는 30초 간격으로만 저장됩니다. 앱을 강제 종료하면 마지막 30초 이내 좌표는 유실될 수 있습니다' },
             { warn: true,  text: '고도 데이터는 GPS 특성상 오차가 ±10~30m입니다. 통계에서 "참고용"으로만 표시됩니다' },

@@ -99,7 +99,7 @@ body {
 #fab-record.show { display:flex; }
 #fab-record:active { transform:translateX(-50%) scale(0.93); }
 #fab-record-icon { font-size:26px; line-height:1; }
-#fab-record-lbl { font-size:9px; font-weight:700; color:white; opacity:0.85; letter-spacing:0.3px; }
+#fab-record-lbl { font-size:12px; font-weight:700; color:white; opacity:0.85; letter-spacing:0.3px; }
 
 /* ══ 하단 컨트롤 바 ══ */
 #bottom-bar {
@@ -234,6 +234,7 @@ body {
     scrollbar-width:none;
 }
 #log-scroll::-webkit-scrollbar { display:none; }
+#help-scroll::-webkit-scrollbar { display:none; }
 #log-empty { text-align:center; padding:40px 20px; color:var(--text-dim); font-size:15px; }
 
 /* 타임라인 스타일 기록 */
@@ -380,6 +381,17 @@ body {
     box-shadow:0 0 0 4px rgba(41,121,255,0.2);
 }
 
+
+/* ══ CSS 점 3개 메뉴 아이콘 ══ */
+.css-dots {
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:4px; width:18px; height:18px;
+}
+.css-dots span {
+    display:block; width:5px; height:5px; border-radius:50%;
+    background:var(--text); flex-shrink:0;
+}
+
 /* @supports 폴백 */
 @supports not (backdrop-filter:blur(1px)) {
     #title-pill,#stat-pill,.icon-btn,#input-area,#ctrl-active,#dropdown { background:rgba(255,255,255,0.97); }
@@ -479,9 +491,10 @@ body {
         </div>
     </div>
     <div id="hud-right">
-        <div class="icon-btn" onclick="toggleDropdown()">
-            <span class="ico"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="4"  r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="9"  r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1" fill="currentColor" stroke="none"/></svg></span>
+        <div class="icon-btn" onclick="toggleDropdown()" id="menu-btn">
+            <span class="css-dots"><span></span><span></span><span></span></span>
         </div>
+        <div class="icon-btn" onclick="openHelpModal()" id="help-btn" style="font-size:17px;font-weight:800;color:var(--text-dim);">?</div>
     </div>
 </div>
 
@@ -585,6 +598,80 @@ body {
         <div id="limit-body" style="font-size:14px;color:#4A5568;line-height:1.7;margin-bottom:20px;"></div>
         <div id="limit-items" style="background:rgba(0,0,0,0.04);border-radius:14px;padding:14px 16px;margin-bottom:18px;display:none;"></div>
         <button id="limit-ok" style="width:100%;padding:14px;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;transition:filter 0.15s;">확인했습니다</button>
+    </div>
+</div>
+
+
+<div id="help-modal" style="display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center;">
+    <div id="help-sheet" style="width:100%;max-width:560px;margin:0 auto;background:#F5F7F5;border-radius:22px 22px 0 0;max-height:82vh;display:flex;flex-direction:column;padding-bottom:var(--sab,0px);">
+        <div style="padding:16px 18px 0;flex-shrink:0;">
+            <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 14px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,0.07);">
+                <span style="font-size:17px;font-weight:800;color:var(--text);">📖 이 앱에 대해서</span>
+                <button onclick="closeHelpModal()" style="background:rgba(0,0,0,0.07);border:none;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-dim);">×</button>
+            </div>
+        </div>
+        <div id="help-scroll" style="overflow-y:auto;flex:1;padding:16px 18px 24px;scrollbar-width:none;">
+            <div style="display:flex;flex-direction:column;gap:18px;">
+
+                <div style="background:white;border-radius:16px;padding:16px;">
+                    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px;">🗺 이 앱은 뭐예요?</div>
+                    <div style="font-size:14px;color:#4A5568;line-height:1.8;">
+                        산에 올라갈 때 <b>어디를 지나왔는지 기록</b>해주는 앱이에요.<br>
+                        출발할 때 버튼을 누르고, 중간중간 지점을 찍고, 내려오면 종료하면 끝이에요! 🎉
+                    </div>
+                </div>
+
+                <div style="background:white;border-radius:16px;padding:16px;">
+                    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px;">📏 거리는 어떻게 계산해요?</div>
+                    <div style="font-size:14px;color:#4A5568;line-height:1.8;">
+                        폰 안에 있는 <b>GPS</b>가 지금 내 위치를 알려줘요.<br>
+                        버튼을 누를 때마다 위치를 저장하고, 저장된 점들 사이의 거리를 <b>지구 표면을 따라 계산</b>해서 합산해요.<br><br>
+                        <span style="background:rgba(46,125,85,0.08);border-radius:8px;padding:6px 10px;display:block;font-size:13px;color:var(--green);font-weight:600;">수동 모드 → 버튼 누를 때만 위치 저장<br>실시간 모드 → 걸으면서 계속 위치 저장</span>
+                    </div>
+                </div>
+
+                <div style="background:white;border-radius:16px;padding:16px;">
+                    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px;">⏱ 시간은 어떻게 계산해요?</div>
+                    <div style="font-size:14px;color:#4A5568;line-height:1.8;">
+                        출발 누른 순간부터 종료 누른 순간까지 시간을 재요.<br>
+                        중간에 <b>정지를 누르면 그 시간은 빼고 계산</b>해요.<br>
+                        밥 먹거나 쉴 때 정지를 누르면 실제 걸은 시간만 남아요! 🍱
+                    </div>
+                </div>
+
+                <div style="background:white;border-radius:16px;padding:16px;">
+                    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px;">⚠️ 이 앱의 한계예요</div>
+                    <div style="font-size:14px;color:#4A5568;line-height:1.8;display:flex;flex-direction:column;gap:10px;">
+                        <div style="display:flex;gap:10px;align-items:flex-start;">
+                            <span style="font-size:18px;flex-shrink:0;">📵</span>
+                            <span><b>화면이 꺼지면 GPS도 꺼져요.</b><br>인터넷 브라우저 앱은 화면이 꺼지면 동작을 멈춰요. 그래서 산행 중에는 화면이 꺼지지 않게 두어야 해요.</span>
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-start;">
+                            <span style="font-size:18px;flex-shrink:0;">📶</span>
+                            <span><b>GPS가 약한 곳에서는 거리가 부정확해요.</b><br>깊은 산속이나 계곡 안, 나무가 빽빽한 곳에서는 GPS 신호가 약해져서 실제 걸은 거리보다 짧게 나올 수 있어요.</span>
+                        </div>
+                        <div style="display:flex;gap:10:align-items:flex-start;">
+                            <span style="font-size:18px;flex-shrink:0;">💾</span>
+                            <span><b>기록은 이 폰에만 저장돼요.</b><br>앱이 아니라 브라우저에 저장하기 때문에 다른 폰에서는 볼 수 없고, 브라우저 데이터를 지우면 기록도 사라져요. 중요한 기록은 내보내기 해두세요!</span>
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-start;">
+                            <span style="font-size:18px;flex-shrink:0;">📱</span>
+                            <span><b>저장 공간이 한정돼 있어요.</b><br>브라우저가 쓸 수 있는 공간이 약 5~10MB로 정해져 있어요. 실시간 모드로 기록하면 GPS 좌표가 많이 쌓여서 금방 찰 수 있어요.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background:linear-gradient(135deg,rgba(46,125,85,0.08),rgba(76,175,125,0.08));border-radius:16px;padding:16px;border:1px solid rgba(46,125,85,0.12);">
+                    <div style="font-size:14px;color:var(--green);font-weight:700;line-height:1.8;">
+                        💡 <b>잘 쓰는 꿀팁!</b><br>
+                        화면 밝기를 낮추면 배터리를 아끼면서도 GPS를 계속 쓸 수 있어요.<br>
+                        중요한 지점(정상, 갈림길)에서 꼭 기록 버튼을 눌러두세요. 나중에 어디 갔는지 한눈에 볼 수 있어요! 🏔
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
 </div>
 
@@ -965,6 +1052,8 @@ function setActive(on){
     document.getElementById('btn-mode-manual').disabled=on;
     document.getElementById('btn-mode-realtime').disabled=on;
     document.getElementById('dd-new').style.display=(!on&&curHike.logs.length>0)?'flex':'none';
+    /* 비활성화 시 출발 버튼 disabled 반드시 해제 */
+    if(!on) $start.disabled=false;
     /* 바텀바 높이가 바뀌므로 transition 끝난 뒤 버튼 위치 재계산 */
     setTimeout(()=>{ map.invalidateSize(); updateMapBtnPositions(); }, 50);
     setTimeout(updateMapBtnPositions, 380); /* transition(0.35s) 완료 후 한 번 더 */
@@ -1077,10 +1166,15 @@ function renderHistoryList(){
     const list=document.getElementById('history-list');
     if(hikeHistory.length===0){list.innerHTML='<div style="text-align:center;padding:40px;color:#6B7A8D;font-size:15px;">저장된 산행이 없습니다</div>';return;}
     list.innerHTML='';
+    function _toMin(t){if(!t)return 0;const p=t.split(':').map(Number);return p.length===3?p[0]*60+p[1]:p[0]*60+(p[1]||0);}
+    function _diffMin(a,b){let d=_toMin(b)-_toMin(a);if(d<0)d+=24*60;return d;}
+    function _fmtDur(min){const h=Math.floor(min/60),m=min%60;return h>0?`${h}:${String(m).padStart(2,'0')}`:`0:${String(m).padStart(2,'0')}`;}
     [...hikeHistory].reverse().forEach((hike,ri)=>{
         const i=hikeHistory.length-1-ri;
         const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
         const s=hike.logs.find(l=>l.type==='출발'), e=hike.logs.find(l=>l.type==='종료');
+        const durMin=(s&&e)?Math.max(0,_diffMin(s.time,e.time)):0;
+        const durStr=durMin>0?` (${_fmtDur(durMin)})`:'';
         const el=document.createElement('div'); el.className='h-item';
         el.innerHTML=`
             <div class="h-item-top">
@@ -1096,7 +1190,7 @@ function renderHistoryList(){
             </div>
             <div class="h-item-stats">
                 <span class="h-item-stat">지점 <b>${hike.logs.length}개</b></span>
-                <span class="h-item-stat">거리 <b>${dist.toFixed(2)}km</b></span>
+                <span class="h-item-stat" style="white-space:nowrap;">거리 <b>${dist.toFixed(2)}km${durStr}</b></span>
                 ${s?`<span class="h-item-stat">출발 <b>${s.time}</b></span>`:''}
                 ${e?`<span class="h-item-stat">종료 <b>${e.time}</b></span>`:''}
             </div>`;
@@ -1760,6 +1854,22 @@ function setTrackModeWithCheck(mode) {
     }
     window.setTrackMode(mode);
 }
+
+
+/* ══ 도움말 모달 ══ */
+window.openHelpModal = function(){
+    const m = document.getElementById('help-modal');
+    m.style.display = 'flex';
+    /* 열릴 때 스크롤 맨 위로 */
+    document.getElementById('help-scroll').scrollTop = 0;
+};
+window.closeHelpModal = function(){
+    document.getElementById('help-modal').style.display = 'none';
+};
+/* 배경 클릭 시 닫기 */
+document.getElementById('help-modal').addEventListener('click', function(e){
+    if(e.target === this) closeHelpModal();
+});
 
 /* ══ 초기화 ══ */
 window.onload=()=>{

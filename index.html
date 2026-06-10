@@ -1422,7 +1422,6 @@ function renderHistoryList(){
         const durStr=durMin>0?` (${_fmtDur(durMin)})`:'';
         const hasRtData = !!(hike.rtCoords && hike.rtCoords.length > 1);
         const el=document.createElement('div'); el.className='h-item' + (hasRtData?' h-item-has-rt':'');
-        el.onclick = (ev) => { if(ev.target.closest('.btn-del-h,.h-item-name-input')) return; window.showHistoryOnMap(i); };
         el.innerHTML=`
             <div class="h-item-top">
                 <input class="h-item-name-input" data-idx="${i}" value="${(hike.location||'이름없음').replace(/"/g,'&quot;')}"
@@ -1435,7 +1434,7 @@ function renderHistoryList(){
                     <button class="btn-del-h" onclick="delHistory(${i},event)">×</button>
                 </div>
             </div>
-            <div class="h-item-stats">
+            <div class="h-item-stats" onclick="window.showHistoryOnMap(${i})" style="cursor:pointer;margin-top:2px;">
                 <span class="h-item-stat">지점 <b>${hike.logs.length}개</b></span>
                 ${hasRtData?'<span class="h-item-rt-badge">경로</span>':''}
                 <span class="h-item-stat" style="white-space:nowrap;">거리 <b>${dist.toFixed(2)}km${durStr}</b></span>

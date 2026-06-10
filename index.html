@@ -1411,7 +1411,10 @@ window.closeHistory=function(){document.getElementById('history-panel').classLis
 window.onHistoryBdClick=function(e){if(e.target===document.getElementById('history-panel'))closeHistory();};
 function renderHistoryList(){
     const list=document.getElementById('history-list');
-    if(hikeHistory.length===0){list.innerHTML='<div style="text-align:center;padding:40px;color:#6B7A8D;font-size:15px;">저장된 산행이 없습니다</div>';return;}
+    if(hikeHistory.length===0){
+        list.innerHTML='<div style="text-align:center;padding:40px;color:#6B7A8D;font-size:15px;">저장된 산행이 없습니다</div>';
+        return;
+    }
     list.innerHTML='';
     function _fmtDur(min){const h=Math.floor(min/60),m=min%60;return h>0?`${h}:${String(m).padStart(2,'0')}`:`0:${String(m).padStart(2,'0')}`;}
     [...hikeHistory].reverse().forEach((hike,ri)=>{
@@ -1419,28 +1422,62 @@ function renderHistoryList(){
         const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
         const s=hike.logs.find(l=>l.type==='출발'), e=hike.logs.find(l=>l.type==='종료');
         const durMin=(s&&e)?Math.max(0,diffMin(s.time,e.time)):0;
-        const durStr=durMin>0?` (${_fmtDur(durMin)})`:'';
-        const hasRtData = !!(hike.rtCoords && hike.rtCoords.length > 1);
-        const el=document.createElement('div'); el.className='h-item' + (hasRtData?' h-item-has-rt':'');
-        el.innerHTML=`
-            <div class="h-item-top">
-                <input class="h-item-name-input" data-idx="${i}" value="${(hike.location||'이름없음').replace(/"/g,'&quot;')}"
-                    style="font-size:15px;font-weight:700;color:var(--text);background:transparent;border:none;outline:none;border-bottom:1.5px solid transparent;padding:0 0 1px;min-width:0;flex:1;cursor:pointer;"
-                    onfocus="this.style.borderBottomColor='var(--green)';this.style.cursor='text';"
-                    onblur="saveHistoryName(this)"
-                    onkeydown="if(event.key==='Enter')this.blur();">
-                <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-                    <span class="h-item-date">${hike.date}</span>
-                    <button class="btn-del-h" onclick="delHistory(${i},event)">×</button>
-                </div>
-            </div>
-            <div class="h-item-stats" onclick="window.showHistoryOnMap(${i})" style="cursor:pointer;margin-top:2px;">
-                <span class="h-item-stat">지점 <b>${hike.logs.length}개</b></span>
-                ${hasRtData?'<span class="h-item-rt-badge">경로</span>':''}
-                <span class="h-item-stat" style="white-space:nowrap;">거리 <b>${dist.toFixed(2)}km${durStr}</b></span>
-                ${s?`<span class="h-item-stat">출발 <b>${s.time}</b></span>`:''}
-                ${e?`<span class="h-item-stat">종료 <b>${e.time}</b></span>`:''}
-            </div>`;
+        const durStr=durMin>0?' ('+_fmtDur(durMin)+')':'';
+        const hasRtData=!!(hike.rtCoords&&hike.rtCoords.length>1);
+
+        /* ── 카드 래퍼 ── */
+        const el=document.createElement('div');
+        el.className='h-item'+(hasRtData?' h-item-has-rt':'');
+
+        /* ── 상단: 이름 입력 + 날짜 + 삭제 ── */
+        const top=document.createElement('div'); top.className='h-item-top';
+
+        const nameInp=document.createElement('input');
+        nameInp.className='h-item-name-input';
+        nameInp.dataset.idx=i;
+        nameInp.value=hike.location||'이름없음';
+        nameInp.style.cssText='font-size:15px;font-weight:700;color:var(--text);background:transparent;border:none;outline:none;border-bottom:1.5px solid transparent;padding:0 0 1px;min-width:0;flex:1;cursor:pointer;';
+        nameInp.addEventListener('focus',function(){this.style.borderBottomColor='var(--green)';this.style.cursor='text';});
+        nameInp.addEventListener('blur',function(){saveHistoryName(this);});
+        nameInp.addEventListener('keydown',function(ev){if(ev.key==='Enter')this.blur();});
+
+        const dateWrap=document.createElement('div');
+        dateWrap.style.cssText='display:flex;align-items:center;gap:4px;flex-shrink:0;';
+        const dateSpan=document.createElement('span');
+        dateSpan.className='h-item-date'; dateSpan.textContent=hike.date||'';
+        const delBtn=document.createElement('button');
+        delBtn.className='btn-del-h'; delBtn.textContent='×';
+        delBtn.addEventListener('click',function(ev){ev.stopPropagation();window.delHistory(i,ev);});
+        dateWrap.appendChild(dateSpan); dateWrap.appendChild(delBtn);
+        top.appendChild(nameInp); top.appendChild(dateWrap);
+
+        /* ── 하단: 통계 (탭하면 지도 표시) ── */
+        const stats=document.createElement('div');
+        stats.className='h-item-stats';
+        stats.style.cssText='cursor:pointer;margin-top:2px;';
+        stats.addEventListener('click',function(){window.showHistoryOnMap(i);});
+
+        const ptStat=document.createElement('span');
+        ptStat.className='h-item-stat';
+        ptStat.innerHTML='지점 <b>'+hike.logs.length+'개</b>';
+        stats.appendChild(ptStat);
+
+        if(hasRtData){
+            const rtBadge=document.createElement('span');
+            rtBadge.className='h-item-rt-badge'; rtBadge.textContent='경로';
+            stats.appendChild(rtBadge);
+        }
+
+        const distStat=document.createElement('span');
+        distStat.className='h-item-stat'; distStat.style.whiteSpace='nowrap';
+        distStat.innerHTML='거리 <b>'+dist.toFixed(2)+'km'+durStr+'</b>';
+        stats.appendChild(distStat);
+
+        if(s){const ss=document.createElement('span');ss.className='h-item-stat';ss.innerHTML='출발 <b>'+s.time+'</b>';stats.appendChild(ss);}
+        if(e){const es=document.createElement('span');es.className='h-item-stat';es.innerHTML='종료 <b>'+e.time+'</b>';stats.appendChild(es);}
+
+        el.appendChild(top);
+        el.appendChild(stats);
         list.appendChild(el);
     });
 }

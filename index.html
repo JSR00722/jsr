@@ -980,51 +980,89 @@ document.getElementById('dim-slider').addEventListener('input', function(){
     this.style.background = `linear-gradient(to right, rgba(0,0,0,0.65) ${v}%, rgba(0,0,0,0.08) ${v}%)`;
 });
 
+let _wakeLockRetryTimer = null;
+let _wakeLockRetryCount = 0;
+const WAKE_MAX_RETRY = 5;
+
+function _setWakeStatus(type, text){
+    const el = document.getElementById('wake-status');
+    if(!el) return;
+    el.textContent = text;
+    el.className = 'dim-wake-status' + (type ? ' ' + type : '');
+}
+
+async function _acquireWakeLock(){
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', _onWakeLockReleased);
+    _wakeLockOn = true;
+    _wakeLockRetryCount = 0;
+    document.getElementById('wake-toggle').classList.add('on');
+    _setWakeStatus('active', '✓ 화면 꺼짐 방지 중');
+}
+
+function _onWakeLockReleased(){
+    _wakeLock = null;
+    // 사용자가 직접 껐을 때는 _wakeLockOn이 이미 false → 재시도 안 함
+    if(!_wakeLockOn) return;
+
+    if(_wakeLockRetryCount >= WAKE_MAX_RETRY){
+        _wakeLockOn = false;
+        document.getElementById('wake-toggle').classList.remove('on');
+        _setWakeStatus('fail', '⚠ 재시도 횟수 초과 — 배터리 절약 모드를 확인해 주세요');
+        return;
+    }
+
+    _wakeLockRetryCount++;
+    const sec = _wakeLockRetryCount <= 2 ? 3 : 10;
+    _setWakeStatus('fail', `⚠ 시스템 해제 감지 — ${sec}초 후 재시도 (${_wakeLockRetryCount}/${WAKE_MAX_RETRY})`);
+
+    clearTimeout(_wakeLockRetryTimer);
+    _wakeLockRetryTimer = setTimeout(async ()=>{
+        if(!_wakeLockOn) return; // 그 사이 사용자가 껐으면 중단
+        if(document.visibilityState !== 'visible'){ // 백그라운드면 잠시 대기
+            _setWakeStatus('fail', '⚠ 화면 복귀 시 자동 재시도합니다');
+            return;
+        }
+        try {
+            await _acquireWakeLock();
+        } catch(e){
+            _setWakeStatus('fail', `⚠ 재시도 실패: ${e.message}`);
+        }
+    }, sec * 1000);
+}
+
 async function toggleWakeLock(){
     const btn = document.getElementById('wake-toggle');
-    const statusEl = document.getElementById('wake-status');
 
     if(!('wakeLock' in navigator)){
-        statusEl.textContent = '⚠ 이 브라우저는 화면 꺼짐 방지를 지원하지 않습니다';
-        statusEl.className = 'dim-wake-status fail';
+        _setWakeStatus('fail', '⚠ 이 브라우저는 화면 꺼짐 방지를 지원하지 않습니다');
         return;
     }
 
     if(!_wakeLockOn){
         try {
-            _wakeLock = await navigator.wakeLock.request('screen');
-            _wakeLockOn = true;
-            btn.classList.add('on');
-            statusEl.textContent = '✓ 화면 꺼짐 방지 중';
-            statusEl.className = 'dim-wake-status active';
-            _wakeLock.addEventListener('release', ()=>{
-                // 시스템이 강제 해제할 경우 (예: 배터리 부족)
-                if(_wakeLockOn){
-                    _wakeLockOn = false;
-                    btn.classList.remove('on');
-                    statusEl.textContent = '⚠ 시스템에 의해 해제되었습니다';
-                    statusEl.className = 'dim-wake-status fail';
-                }
-            });
+            await _acquireWakeLock();
         } catch(e){
-            statusEl.textContent = '⚠ 활성화 실패: ' + e.message;
-            statusEl.className = 'dim-wake-status fail';
+            _setWakeStatus('fail', '⚠ 활성화 실패: ' + e.message);
         }
     } else {
+        clearTimeout(_wakeLockRetryTimer);
+        _wakeLockOn = false; // release 핸들러보다 먼저 false 처리해야 재시도 안 함
         if(_wakeLock){ _wakeLock.release(); _wakeLock = null; }
-        _wakeLockOn = false;
         btn.classList.remove('on');
-        statusEl.textContent = '';
-        statusEl.className = 'dim-wake-status';
+        _setWakeStatus('', '');
     }
 }
 
-// 탭 다시 활성화 시 Wake Lock 자동 재취득
+// 탭 복귀 시: 재시도 대기 중이었던 경우 즉시 재취득
 document.addEventListener('visibilitychange', async ()=>{
     if(document.visibilityState === 'visible' && _wakeLockOn && !_wakeLock){
+        clearTimeout(_wakeLockRetryTimer);
         try {
-            _wakeLock = await navigator.wakeLock.request('screen');
-        } catch(e){}
+            await _acquireWakeLock();
+        } catch(e){
+            _setWakeStatus('fail', `⚠ 재취득 실패: ${e.message}`);
+        }
     }
 });
 

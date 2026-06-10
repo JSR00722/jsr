@@ -297,7 +297,7 @@ body {
 .h-item:active { transform:scale(0.98); }
 .h-item-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
 .h-item-date { font-size:12px; color:var(--text-dim); }
-.h-item-stats { display:flex; gap:12px; flex-wrap:wrap; }
+.h-item-stats { display:flex; gap:12px; flex-wrap:nowrap; overflow:hidden; align-items:center; }
 .h-item-stat { font-size:12px; color:var(--text-dim); }
 .h-item-stat b { color:var(--green); font-weight:700; }
 .btn-del-h { background:none; border:none; color:#C0C8C0; font-size:16px; cursor:pointer; margin-left:6px; }
@@ -495,6 +495,71 @@ body {
 .cal-cell.on{background:var(--green);}
 .cal-cell.future{background:transparent;}
 
+/* ══ 화면 밝기 조절 오버레이 ══ */
+#dim-overlay {
+    position:fixed; inset:0; z-index:1100;
+    background:black; opacity:0; pointer-events:none;
+    transition:opacity 0.3s;
+}
+#dim-panel {
+    position:fixed; bottom:0; left:0; right:0; z-index:1200;
+    max-width:560px; margin:0 auto;
+    background:var(--glass2); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-radius:22px 22px 0 0; border:1px solid var(--border);
+    box-shadow:0 -8px 40px rgba(0,0,0,0.18);
+    padding:16px 20px calc(var(--sab,0px) + 20px);
+    display:none; flex-direction:column; gap:14px;
+    transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+#dim-panel.open { transform:translateY(0); }
+#dim-panel-bd {
+    position:fixed; inset:0; z-index:1199;
+    display:none;
+}
+#dim-panel-bd.open { display:block; }
+.dim-handle { width:40px; height:4px; background:#C8D0C8; border-radius:2px; margin:0 auto 4px; }
+.dim-header { display:flex; justify-content:space-between; align-items:center; }
+.dim-title { font-size:15px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px; }
+.dim-close { background:rgba(0,0,0,0.07); border:none; width:30px; height:30px; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-dim); }
+.dim-row { display:flex; align-items:center; gap:12px; }
+.dim-icon { font-size:18px; width:24px; text-align:center; flex-shrink:0; }
+#dim-slider {
+    -webkit-appearance:none; appearance:none;
+    flex:1; height:6px; border-radius:3px;
+    background:linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.04) 100%);
+    outline:none; cursor:pointer;
+}
+#dim-slider::-webkit-slider-thumb {
+    -webkit-appearance:none; width:26px; height:26px; border-radius:50%;
+    background:white; box-shadow:0 2px 10px rgba(0,0,0,0.25);
+    border:2px solid rgba(0,0,0,0.08); cursor:pointer;
+}
+#dim-slider::-moz-range-thumb {
+    width:26px; height:26px; border-radius:50%;
+    background:white; box-shadow:0 2px 10px rgba(0,0,0,0.25);
+    border:2px solid rgba(0,0,0,0.08); cursor:pointer;
+}
+.dim-pct { font-size:13px; font-weight:800; color:var(--text); width:36px; text-align:right; font-variant-numeric:tabular-nums; flex-shrink:0; }
+.dim-wake-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0 0; border-top:1px solid var(--border); }
+.dim-wake-lbl { display:flex; flex-direction:column; gap:2px; }
+.dim-wake-lbl span:first-child { font-size:14px; font-weight:700; color:var(--text); }
+.dim-wake-lbl span:last-child { font-size:11px; color:var(--text-dim); }
+.dim-toggle {
+    width:48px; height:28px; border-radius:14px; border:none; cursor:pointer;
+    background:rgba(0,0,0,0.12); position:relative; transition:background 0.25s; flex-shrink:0;
+}
+.dim-toggle.on { background:var(--green); }
+.dim-toggle::after {
+    content:''; position:absolute; top:3px; left:3px;
+    width:22px; height:22px; border-radius:50%;
+    background:white; box-shadow:0 1px 6px rgba(0,0,0,0.2);
+    transition:transform 0.25s;
+}
+.dim-toggle.on::after { transform:translateX(20px); }
+.dim-wake-status { font-size:10px; font-weight:700; margin-top:2px; }
+.dim-wake-status.active { color:var(--green); }
+.dim-wake-status.fail { color:var(--danger); }
+
 /* ══ 요약 모달 인라인 스타일 ══ */
 .sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
 .sum-card{background:white;border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.06);}
@@ -614,6 +679,10 @@ body {
         <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 L10 13"/><polyline points="6,7 10,3 14,7"/><path d="M4 14 L4 16 C4 16.6 4.4 17 5 17 L15 17 C15.6 17 16 16.6 16 16 L16 14"/></svg></span>
         내보내기
     </button>
+    <button class="dd-item" onclick="ddAction('dim')">
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.5"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="10" y1="16" x2="10" y2="18"/><line x1="2" y1="10" x2="4" y2="10"/><line x1="16" y1="10" x2="18" y2="10"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="14.4" y1="14.4" x2="15.8" y2="15.8"/><line x1="4.2" y1="15.8" x2="5.6" y2="14.4"/><line x1="14.4" y1="5.6" x2="15.8" y2="4.2"/></svg></span>
+        화면 밝기<span id="dd-dim-on" style="display:none;margin-left:auto;font-size:10px;font-weight:700;color:var(--warn);background:rgba(224,152,32,0.12);border-radius:6px;padding:2px 7px;">ON</span>
+    </button>
     <button class="dd-item" id="dd-new" onclick="ddAction('new')">
         <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10 A6 6 0 1 1 10 4"/><polyline points="10,2 10,5.5 13.5,5.5"/></svg></span>
         새 산행
@@ -635,6 +704,30 @@ body {
         <div id="log-empty">아직 기록이 없습니다</div>
         <div id="logs"></div>
     </div>
+</div>
+
+<!-- 화면 밝기 오버레이 -->
+<div id="dim-overlay"></div>
+<div id="dim-panel-bd" onclick="closeDimPanel()"></div>
+<div id="dim-panel">
+    <div class="dim-handle"></div>
+    <div class="dim-header">
+        <span class="dim-title">🌙 화면 밝기 조절</span>
+        <button class="dim-close" onclick="closeDimPanel()">×</button>
+    </div>
+    <div class="dim-row">
+        <span class="dim-icon">☀️</span>
+        <input type="range" id="dim-slider" min="0" max="85" step="5" value="0">
+        <span class="dim-pct" id="dim-pct-lbl">0%</span>
+    </div>
+    <div class="dim-wake-row">
+        <div class="dim-wake-lbl">
+            <span>화면 꺼짐 방지</span>
+            <span>산행 중 화면이 자동으로 꺼지지 않게 합니다</span>
+        </div>
+        <button class="dim-toggle" id="wake-toggle" onclick="toggleWakeLock()"></button>
+    </div>
+    <div id="wake-status" class="dim-wake-status"></div>
 </div>
 
 <div id="limit-modal" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
@@ -854,7 +947,86 @@ window.ddAction=function(a){
     else if(a==='stats') openStatsWithCheck();
     else if(a==='export') doExport();
     else if(a==='new') doNewHike();
+    else if(a==='dim') openDimPanel();
 };
+
+/* ══ 화면 밝기 조절 + Wake Lock ══ */
+let _wakeLock = null;
+let _wakeLockOn = false;
+
+function openDimPanel(){
+    const panel = document.getElementById('dim-panel');
+    const bd    = document.getElementById('dim-panel-bd');
+    panel.style.display = 'flex';
+    bd.classList.add('open');
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ panel.classList.add('open'); }); });
+}
+function closeDimPanel(){
+    const panel = document.getElementById('dim-panel');
+    panel.classList.remove('open');
+    document.getElementById('dim-panel-bd').classList.remove('open');
+    panel.addEventListener('transitionend', ()=>{ if(!panel.classList.contains('open')) panel.style.display='none'; }, {once:true});
+}
+
+document.getElementById('dim-slider').addEventListener('input', function(){
+    const v = parseInt(this.value);
+    const overlay = document.getElementById('dim-overlay');
+    const lbl     = document.getElementById('dim-pct-lbl');
+    overlay.style.opacity = (v / 100).toFixed(2);
+    overlay.style.pointerEvents = v > 0 ? 'none' : 'none'; // 항상 터치 통과
+    lbl.textContent = v + '%';
+    document.getElementById('dd-dim-on').style.display = v > 0 ? 'inline-block' : 'none';
+    // 슬라이더 트랙 색상 업데이트
+    this.style.background = `linear-gradient(to right, rgba(0,0,0,0.65) ${v}%, rgba(0,0,0,0.08) ${v}%)`;
+});
+
+async function toggleWakeLock(){
+    const btn = document.getElementById('wake-toggle');
+    const statusEl = document.getElementById('wake-status');
+
+    if(!('wakeLock' in navigator)){
+        statusEl.textContent = '⚠ 이 브라우저는 화면 꺼짐 방지를 지원하지 않습니다';
+        statusEl.className = 'dim-wake-status fail';
+        return;
+    }
+
+    if(!_wakeLockOn){
+        try {
+            _wakeLock = await navigator.wakeLock.request('screen');
+            _wakeLockOn = true;
+            btn.classList.add('on');
+            statusEl.textContent = '✓ 화면 꺼짐 방지 중';
+            statusEl.className = 'dim-wake-status active';
+            _wakeLock.addEventListener('release', ()=>{
+                // 시스템이 강제 해제할 경우 (예: 배터리 부족)
+                if(_wakeLockOn){
+                    _wakeLockOn = false;
+                    btn.classList.remove('on');
+                    statusEl.textContent = '⚠ 시스템에 의해 해제되었습니다';
+                    statusEl.className = 'dim-wake-status fail';
+                }
+            });
+        } catch(e){
+            statusEl.textContent = '⚠ 활성화 실패: ' + e.message;
+            statusEl.className = 'dim-wake-status fail';
+        }
+    } else {
+        if(_wakeLock){ _wakeLock.release(); _wakeLock = null; }
+        _wakeLockOn = false;
+        btn.classList.remove('on');
+        statusEl.textContent = '';
+        statusEl.className = 'dim-wake-status';
+    }
+}
+
+// 탭 다시 활성화 시 Wake Lock 자동 재취득
+document.addEventListener('visibilitychange', async ()=>{
+    if(document.visibilityState === 'visible' && _wakeLockOn && !_wakeLock){
+        try {
+            _wakeLock = await navigator.wakeLock.request('screen');
+        } catch(e){}
+    }
+});
 
 /* ══ 유틸 ══ */
 function nowTime(){return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
@@ -1321,7 +1493,7 @@ function renderHistoryList(){
 
         const stats=document.createElement('div');
         stats.className='h-item-stats';
-        stats.style.cssText='cursor:pointer;margin-top:2px;';
+        stats.style.cssText='cursor:pointer;margin-top:2px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap;';
         stats.addEventListener('click',function(){window.showHistoryOnMap(i);});
 
         const ptStat=document.createElement('span');
@@ -1337,7 +1509,7 @@ function renderHistoryList(){
 
         const distStat=document.createElement('span');
         distStat.className='h-item-stat'; distStat.style.whiteSpace='nowrap';
-        distStat.innerHTML='거리 <b>'+dist.toFixed(2)+'km'+durStr+'</b>';
+        distStat.innerHTML='<b>'+dist.toFixed(2)+'km'+durStr+'</b>';
         stats.appendChild(distStat);
 
         const sLog=hike.logs.find(l=>l.type==='출발'), eLog=hike.logs.find(l=>l.type==='종료');
@@ -1407,7 +1579,7 @@ function renderStats(){
 
     const totalDist=hikesData.reduce((s,h)=>s+h.dist,0);
     const totalTimeMin=hikesData.reduce((s,h)=>s+h.totalMin,0);
-    const totalTimeHr=Math.round(totalTimeMin/60);
+    const totalTimeHr=Math.floor(totalTimeMin/60);
     const avgDist=(totalDist/all.length);
     const avgTimeMin=Math.round(totalTimeMin/all.length);
 
@@ -1467,7 +1639,7 @@ function renderStats(){
     <div class="st-sec">
         <div class="st-sec-title">나의 최고 기록</div>
         ${maxDist?`<div class="rec-item"><div class="rec-left"><span class="rec-lbl">최장 거리</span><span class="rec-sub">${maxDist.date} · ${maxDist.loc}</span></div><span class="rec-val">${maxDist.dist.toFixed(2)} km</span></div>`:''}
-        ${maxTime?`<div class="rec-item"><div class="rec-left"><span class="rec-lbl">최장 시간</span><span class="rec-sub">${maxTime.date} · ${maxTime.loc}</span></div><span class="rec-val">${Math.floor(maxTime.totalMin/60)}h ${maxTime.totalMin%60}m</span></div>`:''}
+        ${maxTime?`<div class="rec-item"><div class="rec-left"><span class="rec-lbl">최장 시간</span><span class="rec-sub">${maxTime.date} · ${maxTime.loc}</span></div><span class="rec-val">${Math.floor(maxTime.totalMin/60)}h${maxTime.totalMin%60>0?` ${maxTime.totalMin%60}m`:''}</span></div>`:''}
         ${avgPace>0?`<div class="rec-item"><div class="rec-left"><span class="rec-lbl">평균 페이스</span><span class="rec-sub">이동시간 기준 (휴식 제외)</span></div><span class="rec-val">${avgPace.toFixed(1)} km/h</span></div>`:''}
     </div>
     <div class="st-sec">

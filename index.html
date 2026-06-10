@@ -10,15 +10,12 @@
 :root {
     --sat: env(safe-area-inset-top,0px);
     --sab: env(safe-area-inset-bottom,0px);
-    --sal: env(safe-area-inset-left,0px);
-    --sar: env(safe-area-inset-right,0px);
     --glass: rgba(255,255,255,0.88);
     --glass2: rgba(255,255,255,0.96);
     --shadow: 0 4px 24px rgba(0,0,0,0.13);
     --shadow-sm: 0 2px 10px rgba(0,0,0,0.10);
     --green: #2E7D55;
     --green-light: #4CAF7D;
-    --sky: #4A90D9;
     --danger: #E05252;
     --warn: #E09820;
     --text: #1A2332;
@@ -98,7 +95,6 @@ body {
 }
 #fab-record.show { display:flex; }
 #fab-record:active { transform:translateX(-50%) scale(0.93); }
-#fab-record-icon { font-size:26px; line-height:1; }
 #fab-record-lbl { font-size:12px; font-weight:700; color:white; opacity:0.85; letter-spacing:0.3px; }
 
 /* ══ 하단 컨트롤 바 ══ */
@@ -298,7 +294,6 @@ body {
 }
 .h-item:active { transform:scale(0.98); }
 .h-item-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
-.h-item-name { font-size:15px; font-weight:700; color:var(--text); }
 .h-item-date { font-size:12px; color:var(--text-dim); }
 .h-item-stats { display:flex; gap:12px; flex-wrap:wrap; }
 .h-item-stat { font-size:12px; color:var(--text-dim); }
@@ -388,7 +383,7 @@ body {
     justify-content:center; gap:4px; width:18px; height:18px;
 }
 .css-dots span {
-    display:block; width:5px; height:5px; border-radius:50%;
+    display:block; width:18px; height:2px; border-radius:1px;
     background:var(--text); flex-shrink:0;
 }
 
@@ -499,13 +494,13 @@ body {
 </div>
 
 <button id="map-layer-btn" onclick="toggleMapLayer()">
-    <span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,2 18,6.5 10,11 2,6.5"/><polyline points="2,10 10,14.5 18,10"/><polyline points="2,13.5 10,18 18,13.5"/></svg></span>
 </button>
 <button id="btn-myloc" onclick="goToMyLocation()">
-    <span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3"/><line x1="10" y1="1" x2="10" y2="5"/><line x1="10" y1="15" x2="10" y2="19"/><line x1="1" y1="10" x2="5" y2="10"/><line x1="15" y1="10" x2="19" y2="10"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="5"/><circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none"/><line x1="10" y1="1" x2="10" y2="5"/><line x1="10" y1="15" x2="10" y2="19"/><line x1="1" y1="10" x2="5" y2="10"/><line x1="15" y1="10" x2="19" y2="10"/></svg></span>
 </button>
 <div id="btn-show-logs" onclick="openLogSheet()">
-    <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="6"  x2="16" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="12" y2="14"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="5" x2="16" y2="5"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="15" x2="13" y2="15"/></svg></span>
     <div id="log-badge" style="display:none"></div>
 </div>
 
@@ -523,11 +518,11 @@ body {
             </div>
             <div id="track-toggle">
                 <button class="track-btn on" id="btn-mode-manual" onclick="setTrackModeWithCheck('manual')">
-                    <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2 C8 2 8 2 8 2 L8 2 C6.9 2 6 2.9 6 4 L6 9 L4.5 9 C3.7 9 3 9.7 3 10.5 L3 11 C3 13.2 4.8 15 7 15 L9 15 C11.2 15 13 13.2 13 11 L13 6 C13 5.1 12.3 4.4 11.4 4.5 L11 4.5 L11 4 C11 2.9 10.1 2 9 2 Z"/><line x1="6" y1="6" x2="6" y2="9"/><line x1="8" y1="5" x2="8" y2="9"/><line x1="11" y1="6" x2="11" y2="9"/></svg></span>
+                    <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7 L6 3.5 C6 2.7 6.7 2 7.5 2 C8.3 2 9 2.7 9 3.5 L9 7"/><path d="M9 5 C9 4.2 9.7 3.5 10.5 3.5 C11.3 3.5 12 4.2 12 5 L12 7"/><path d="M12 6 C12 5.2 12.6 4.6 13.3 4.8 C13.8 4.9 14 5.4 14 6 L14 10 C14 12.2 12.2 14 10 14 L8 14 C6.3 14 4.8 13 4.1 11.5 L2.5 8.2 C2.2 7.5 2.5 6.7 3.2 6.4 C3.9 6.1 4.7 6.4 5 7.1 L6 9"/><path d="M6 7 L6 9"/></svg></span>
                     수동
                 </button>
                 <button class="track-btn" id="btn-mode-realtime" onclick="setTrackModeWithCheck('realtime')">
-                    <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="2" fill="currentColor" stroke="none"/><path d="M4.2 11.8 C2.8 10.4 2 8.5 2 8 C2 6 3.6 4.2 4.2 4.2"/><path d="M11.8 4.2 C13.2 5.6 14 7.2 14 8 C14 10 12.4 11.8 11.8 11.8"/><path d="M2.6 13.4 C0.9 11.7 0 10 0 8 C0 5 2 2.6 2.6 2.6" opacity="0.45"/><path d="M13.4 2.6 C15.1 4.3 16 6 16 8 C16 11 14 13.4 13.4 13.4" opacity="0.45"/></svg></span>
+                    <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="1.8" fill="currentColor" stroke="none"/><path d="M5.2 10.8 A4 4 0 0 1 5.2 5.2"/><path d="M10.8 5.2 A4 4 0 0 1 10.8 10.8"/><path d="M3.2 12.8 A7 7 0 0 1 3.2 3.2" opacity="0.4"/><path d="M12.8 3.2 A7 7 0 0 1 12.8 12.8" opacity="0.4"/></svg></span>
                     실시간
                 </button>
             </div>
@@ -556,19 +551,19 @@ body {
 
 <div id="dropdown">
     <button class="dd-item" onclick="ddAction('history')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="3" rx="1"/><path d="M3 7 L3 16 C3 16.6 3.4 17 4 17 L16 17 C16.6 17 17 16.6 17 16 L17 7"/><path d="M8 11 L12 11"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="3" rx="1"/><path d="M3 7 L3 16 C3 16.6 3.4 17 4 17 L16 17 C16.6 17 17 16.6 17 16 L17 7"/><path d="M8 11 L12 11"/></svg></span>
         보관함<span id="dd-badge"></span>
     </button>
     <button class="dd-item" onclick="ddAction('stats')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="3" height="6" rx="1"/><rect x="8.5" y="7" width="3" height="11" rx="1"/><rect x="15" y="3" width="3" height="15" rx="1"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="3" height="6" rx="1"/><rect x="8.5" y="7" width="3" height="11" rx="1"/><rect x="15" y="3" width="3" height="15" rx="1"/></svg></span>
         통계
     </button>
     <button class="dd-item" onclick="ddAction('export')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 L10 13"/><polyline points="6,7 10,3 14,7"/><path d="M4 14 L4 16 C4 16.6 4.4 17 5 17 L15 17 C15.6 17 16 16.6 16 16 L16 14"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 L10 13"/><polyline points="6,7 10,3 14,7"/><path d="M4 14 L4 16 C4 16.6 4.4 17 5 17 L15 17 C15.6 17 16 16.6 16 16 L16 14"/></svg></span>
         내보내기
     </button>
     <button class="dd-item" id="dd-new" onclick="ddAction('new')">
-        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10 A6 6 0 1 1 10 4"/><polyline points="10,2 10,5.5 13.5,5.5"/></svg></span>
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10 A6 6 0 1 1 10 4"/><polyline points="10,2 10,5.5 13.5,5.5"/></svg></span>
         새 산행
     </button>
 </div>
@@ -594,7 +589,7 @@ body {
     <div id="limit-sheet" style="width:100%;max-width:560px;background:#FAFBFA;border-radius:22px 22px 0 0;padding:20px 20px calc(var(--sab,0px) + 20px);box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
         <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 18px;"></div>
         <div id="limit-icon" style="font-size:32px;text-align:center;margin-bottom:10px;"></div>
-        <div id="limit-title" style="font-size:17px;font-weight:800;color:#1A2332;text-align:center;margin-bottom:6px;"></div>
+        <div id="limit-title" style="font-size:17px;font-weight:800;color:var(--text);text-align:center;margin-bottom:6px;"></div>
         <div id="limit-body" style="font-size:14px;color:#4A5568;line-height:1.7;margin-bottom:20px;"></div>
         <div id="limit-items" style="background:rgba(0,0,0,0.04);border-radius:14px;padding:14px 16px;margin-bottom:18px;display:none;"></div>
         <button id="limit-ok" style="width:100%;padding:14px;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;transition:filter 0.15s;">확인했습니다</button>
@@ -725,8 +720,8 @@ const tileSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/s
 tileNormal.addTo(map);
 let isSat = false;
 
-const MAP_ICO = `<span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>`;
-const SAT_ICO = `<span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="7" height="7" rx="1" transform="rotate(-45 5.5 12.5)"/><line x1="11" y1="5" x2="15" y2="9"/><path d="M12 3 C14 3 17 6 17 8"/><path d="M14 1 C17 1 19 4 19 7" opacity="0.5"/></svg></span>`;
+const MAP_ICO = `<span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,2 18,6.5 10,11 2,6.5"/><polyline points="2,10 10,14.5 18,10"/><polyline points="2,13.5 10,18 18,13.5"/></svg></span>`;
+const SAT_ICO = `<span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="7" height="7" rx="1" transform="rotate(-45 5.5 12.5)"/><line x1="11" y1="5" x2="15" y2="9"/><path d="M12 3 C14 3 17 6 17 8"/><path d="M14 1 C17 1 19 4 19 7" opacity="0.5"/></svg></span>`;
 
 window.toggleMapLayer = function(){
     const btn = document.getElementById('map-layer-btn');
@@ -738,16 +733,36 @@ window.toggleMapLayer = function(){
 window.goToMyLocation = function(){
     const btn=document.getElementById('btn-myloc');
     if(!navigator.geolocation){alert('위치 정보를 사용할 수 없습니다.');return;}
-    btn.style.opacity='0.5';
+    /* 로딩 표시 */
+    btn.style.opacity='0.45';
+    btn.style.transform='scale(0.92)';
     navigator.geolocation.getCurrentPosition(
         pos=>{
             btn.style.opacity='';
+            btn.style.transform='';
             const lat=pos.coords.latitude, lng=pos.coords.longitude;
+            const acc=pos.coords.accuracy;
+            /* 지도 이동 */
             map.setView([lat,lng],16);
             userDragged=false;
+            /* 산행 중이 아닐 때도 현재위치 점 표시
+               산행 중이면 이미 GPS watch가 locDot을 관리하므로 중복 방지 */
+            if(!$ctrlAct.classList.contains('show')){
+                updateLocDot(lat,lng,acc);
+                /* 5초 후 자동 제거 (산행 중이 아닐 때만) */
+                clearTimeout(window._locDotTimer);
+                window._locDotTimer=setTimeout(()=>{
+                    if(!$ctrlAct.classList.contains('show')) clearLocDot();
+                }, 5000);
+            }
         },
-        ()=>{btn.style.opacity='';alert('현재 위치를 가져올 수 없습니다.');},
-        {enableHighAccuracy:true,timeout:8000,maximumAge:15000}
+        (err)=>{
+            btn.style.opacity='';
+            btn.style.transform='';
+            alert('현재 위치를 가져올 수 없습니다.
+' + (err.code===1?'위치 권한을 허용해주세요.':'GPS 신호를 찾을 수 없습니다.'));
+        },
+        {enableHighAccuracy:true,timeout:8000,maximumAge:5000}
     );
 };
 if(window.visualViewport) window.visualViewport.addEventListener('resize',()=>map.invalidateSize());
@@ -826,6 +841,8 @@ function hav(la1,lo1,la2,lo2){
     const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
     return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+function toMin(t){if(!t)return 0;const p=t.split(':').map(Number);return p.length===3?p[0]*60+p[1]:p[0]*60+(p[1]||0);}
+function diffMin(a,b){let d=toMin(b)-toMin(a);if(d<0)d+=24*60;return d;}
 function calcDist(logs){
     let t=0; const pts=logs.filter(l=>l.lat&&l.lng);
     for(let i=1;i<pts.length;i++) t+=hav(+pts[i-1].lat,+pts[i-1].lng,+pts[i].lat,+pts[i].lng);
@@ -1166,14 +1183,12 @@ function renderHistoryList(){
     const list=document.getElementById('history-list');
     if(hikeHistory.length===0){list.innerHTML='<div style="text-align:center;padding:40px;color:#6B7A8D;font-size:15px;">저장된 산행이 없습니다</div>';return;}
     list.innerHTML='';
-    function _toMin(t){if(!t)return 0;const p=t.split(':').map(Number);return p.length===3?p[0]*60+p[1]:p[0]*60+(p[1]||0);}
-    function _diffMin(a,b){let d=_toMin(b)-_toMin(a);if(d<0)d+=24*60;return d;}
     function _fmtDur(min){const h=Math.floor(min/60),m=min%60;return h>0?`${h}:${String(m).padStart(2,'0')}`:`0:${String(m).padStart(2,'0')}`;}
     [...hikeHistory].reverse().forEach((hike,ri)=>{
         const i=hikeHistory.length-1-ri;
         const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
         const s=hike.logs.find(l=>l.type==='출발'), e=hike.logs.find(l=>l.type==='종료');
-        const durMin=(s&&e)?Math.max(0,_diffMin(s.time,e.time)):0;
+        const durMin=(s&&e)?Math.max(0,diffMin(s.time,e.time)):0;
         const durStr=durMin>0?` (${_fmtDur(durMin)})`:'';
         const el=document.createElement('div'); el.className='h-item';
         el.innerHTML=`
@@ -1237,9 +1252,7 @@ function renderStats(){
     }
     document.getElementById('stats-range').textContent=`(${all.length}회 산행)`;
 
-    /* ── 데이터 계산 ── */
-    function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
-    function diffMin(from,to){let d=toMin(to)-toMin(from);if(d<0)d+=24*60;return d;}
+    /* ── 데이터 계산 (전역 toMin/diffMin 사용) ── */
     const hikesData=all.map(h=>{
         const st=h.logs.find(l=>l.type==='출발');
         const en=h.logs.find(l=>l.type==='종료');
@@ -1594,9 +1607,7 @@ function showSummary(hike){
     const pauses=hike.logs.filter(l=>l.type==='일시정지');
     const resumes=hike.logs.filter(l=>l.type==='재개');
 
-    /* 시간 파싱 HH:MM → 분, 자정 넘김 처리 */
-    function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
-    function diffMin(from,to){let d=toMin(to)-toMin(from);if(d<0)d+=24*60;return d;}
+    /* 시간 파싱: 전역 toMin/diffMin 사용 */
     const totalMin = (st&&en)?diffMin(st.time,en.time):0;
     let restMin=0;
     pauses.forEach((p,i)=>{const r=resumes[i];if(r)restMin+=diffMin(p.time,r.time);});
@@ -1719,12 +1730,8 @@ function showLimitModal(type, onConfirm, extraData) {
     const titleEl = document.getElementById('limit-title');
     const bodyEl  = document.getElementById('limit-body');
     const itemsEl = document.getElementById('limit-items');
-    const okBtn   = document.getElementById('limit-ok');
-
     iconEl.textContent = cfg.icon;
     titleEl.textContent = cfg.title;
-    okBtn.style.background = cfg.btnColor;
-    okBtn.style.color = 'white';
 
     /* storage 타입은 실제 수치로 동적 생성 */
     if(type === 'storage' && extraData) {

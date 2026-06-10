@@ -155,7 +155,18 @@ body {
     border-radius:var(--r); padding:10px 12px; border:1px solid var(--border);
     box-shadow:var(--shadow); gap:8px; align-items:center;
 }
-#ctrl-active.show { display:flex; }
+#ctrl-active.show { display:flex; flex-direction:column; gap:6px; }
+#active-loc-row { width:100%; }
+#active-loc-input {
+    width:100%; box-sizing:border-box;
+    background:rgba(0,0,0,0.05); border:1px solid var(--border);
+    border-radius:10px; padding:7px 12px;
+    font-size:13px; font-weight:600; color:var(--text);
+    outline:none;
+}
+#active-loc-input:focus { border-color:var(--green); background:rgba(46,125,85,0.06); }
+#active-loc-input::placeholder { color:var(--text-dim); font-weight:400; }
+#active-ctrl-row { display:flex; align-items:center; gap:8px; width:100%; }
 #timer-big {
     flex:1; font-size:22px; font-weight:800; color:var(--text);
     font-variant-numeric:tabular-nums; letter-spacing:-0.5px;
@@ -341,9 +352,19 @@ body {
 }
 #map-layer-btn:active { transform:scale(0.92); }
 
+#btn-myloc {
+    position:absolute; bottom:calc(var(--sab) + 148px); right:16px; z-index:10;
+    width:42px; height:42px; border-radius:13px;
+    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--border); box-shadow:var(--shadow-sm);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:transform 0.12s;
+}
+#btn-myloc:active { transform:scale(0.92); }
+
 /* 기록 보기 버튼 (지도 위) */
 #btn-show-logs {
-    position:absolute; bottom:calc(var(--sab) + 148px); right:16px; z-index:10;
+    position:absolute; bottom:calc(var(--sab) + 200px); right:16px; z-index:10;
     width:42px; height:42px; border-radius:13px;
     background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border:1px solid var(--border); box-shadow:var(--shadow-sm);
@@ -370,7 +391,7 @@ body {
 /* @supports 폴백 */
 @supports not (backdrop-filter:blur(1px)) {
     #title-pill,#stat-pill,.icon-btn,#input-area,#ctrl-active,#dropdown { background:rgba(255,255,255,0.97); }
-    #map-layer-btn,#btn-show-logs { background:rgba(255,255,255,0.97); }
+    #map-layer-btn,#btn-show-logs,#btn-myloc { background:rgba(255,255,255,0.97); }
 }
 @media (prefers-reduced-motion:reduce) {
     #status-dot.active { animation:none; }
@@ -384,7 +405,8 @@ body {
     #ctrl-idle { gap:8px; }
     #input-area { padding:8px; }
     #map-layer-btn { bottom:calc(var(--sab) + 72px); }
-    #btn-show-logs { bottom:calc(var(--sab) + 118px); }
+    #btn-myloc { bottom:calc(var(--sab) + 118px); }
+    #btn-show-logs { bottom:calc(var(--sab) + 164px); }
 }
 
 /* ══ CSS SVG 아이콘 공통 ══ */
@@ -433,6 +455,9 @@ body {
 <button id="map-layer-btn" onclick="toggleMapLayer()">
     <span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><polygon points="10,3 18,7.5 10,12 2,7.5"/><polyline points="2,11.5 10,16 18,11.5"/></svg></span>
 </button>
+<button id="btn-myloc" onclick="goToMyLocation()">
+    <span class="ico"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="#1A2332" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3"/><line x1="10" y1="1" x2="10" y2="5"/><line x1="10" y1="15" x2="10" y2="19"/><line x1="1" y1="10" x2="5" y2="10"/><line x1="15" y1="10" x2="19" y2="10"/></svg></span>
+</button>
 <div id="btn-show-logs" onclick="openLogSheet()">
     <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="#1A2332" stroke-width="1.7" stroke-linecap="round"><line x1="4" y1="6"  x2="16" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="12" y2="14"/></svg></span>
     <div id="log-badge" style="display:none"></div>
@@ -467,6 +492,10 @@ body {
         </button>
     </div>
     <div id="ctrl-active">
+        <div id="active-loc-row">
+            <input type="text" id="active-loc-input" placeholder="산 이름" oninput="curHike.location=this.value;save();">
+        </div>
+        <div id="active-ctrl-row">
         <span id="timer-big">00:00:00</span>
         <button id="btn-pause" onclick="onPauseClick()">
             <span class="ico" id="pause-ico">
@@ -478,6 +507,7 @@ body {
             <span class="ico"><svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,8 6,12 13,4"/></svg></span>
             종료
         </button>
+        </div>
     </div>
 </div>
 
@@ -586,6 +616,22 @@ window.toggleMapLayer = function(){
     if(isSat){map.removeLayer(tileSatellite);tileNormal.addTo(map);btn.innerHTML=MAP_ICO;}
     else{map.removeLayer(tileNormal);tileSatellite.addTo(map);btn.innerHTML=SAT_ICO;}
     isSat=!isSat;
+};
+
+window.goToMyLocation = function(){
+    const btn=document.getElementById('btn-myloc');
+    if(!navigator.geolocation){alert('위치 정보를 사용할 수 없습니다.');return;}
+    btn.style.opacity='0.5';
+    navigator.geolocation.getCurrentPosition(
+        pos=>{
+            btn.style.opacity='';
+            const lat=pos.coords.latitude, lng=pos.coords.longitude;
+            map.setView([lat,lng],16);
+            userDragged=false;
+        },
+        ()=>{btn.style.opacity='';alert('현재 위치를 가져올 수 없습니다.');},
+        {enableHighAccuracy:true,timeout:8000,maximumAge:15000}
+    );
 };
 if(window.visualViewport) window.visualViewport.addEventListener('resize',()=>map.invalidateSize());
 function alignBody(){
@@ -957,6 +1003,8 @@ window.closeLogSheet=function(){
 
 /* ══ 삭제 ══ */
 window.deleteLog=function(id){
+    const target=curHike.logs.find(l=>l.id===id);
+    if(target&&target.type==='출발'){alert('출발 기록은 삭제할 수 없습니다.');return;}
     if(!confirm('이 기록을 삭제하시겠습니까?')) return;
     curHike.logs=curHike.logs.filter(l=>l.id!==id);
     routeCoords=[]; curHike.logs.forEach(l=>{if(l.lat&&l.lng)routeCoords.push([+l.lat,+l.lng]);});
@@ -1321,6 +1369,7 @@ function doNewHike(){
 /* ══ 버튼 이벤트 ══ */
 $start.addEventListener('click',()=>{
     setActive(true); startTimer(); lastMoveT=Date.now();
+    document.getElementById('active-loc-input').value=$locInp.value;
     if(trackMode==='realtime') startWatch(); else startIdle();
     fetchAndRecord('출발');
 });

@@ -156,16 +156,6 @@ body {
     box-shadow:var(--shadow); gap:8px; align-items:center;
 }
 #ctrl-active.show { display:flex; flex-direction:column; gap:6px; }
-#active-loc-row { width:100%; }
-#active-loc-input {
-    width:100%; box-sizing:border-box;
-    background:rgba(0,0,0,0.05); border:1px solid var(--border);
-    border-radius:10px; padding:7px 12px;
-    font-size:13px; font-weight:600; color:var(--text);
-    outline:none;
-}
-#active-loc-input:focus { border-color:var(--green); background:rgba(46,125,85,0.06); }
-#active-loc-input::placeholder { color:var(--text-dim); font-weight:400; }
 #active-ctrl-row { display:flex; align-items:center; gap:8px; width:100%; }
 #timer-big {
     flex:1; font-size:22px; font-weight:800; color:var(--text);
@@ -423,6 +413,47 @@ body {
 #btn-pause .ico  { width:15px; height:15px; margin-right:5px; }
 #btn-end   .ico  { width:15px; height:15px; margin-right:5px; }
 .icon-btn .ico   { width:18px; height:18px; }
+
+/* ══ 통계 패널 인라인 스타일 (renderStats에서 중복 삽입 방지) ══ */
+.st-sec{background:white;border-radius:16px;padding:18px 16px;margin-bottom:14px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
+.st-sec-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;}
+.st-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
+.st-kpi2{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.st-kpi-card{background:white;border-radius:14px;padding:14px 8px;box-shadow:0 1px 8px rgba(0,0,0,0.04);text-align:center;}
+.st-kpi-val{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+.st-kpi-lbl{font-size:11px;font-weight:600;color:var(--text-dim);margin-top:4px;}
+.st-kpi-sub{font-size:10px;color:var(--text-dim);margin-top:2px;opacity:0.7;}
+.chart-box{display:flex;align-items:center;gap:20px;padding:0 2px;}
+.chart-legend{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+.st-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.st-bar-lbl{font-size:12px;color:var(--text-dim);width:26px;text-align:right;flex-shrink:0;font-weight:600;}
+.st-bar-bg{flex:1;height:10px;background:rgba(0,0,0,0.04);border-radius:5px;overflow:hidden;}
+.st-bar-fill{height:100%;border-radius:5px;background:var(--green);}
+.st-bar-cnt{font-size:12px;font-weight:700;color:var(--text);width:20px;text-align:right;flex-shrink:0;}
+.rec-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+.rec-item:last-child{border-bottom:none;padding-bottom:0;}
+.rec-left{display:flex;flex-direction:column;gap:2px;}
+.rec-lbl{font-size:13px;font-weight:600;color:var(--text-dim);}
+.rec-sub{font-size:11px;color:#A0AABA;}
+.rec-val{font-size:16px;font-weight:800;color:var(--green);}
+.cal-wrap{display:flex;gap:4px;align-items:flex-start;margin-top:4px;}
+.cal-dow{display:grid;grid-template-rows:repeat(7,1fr);gap:2px;flex-shrink:0;}
+.cal-dow-lbl{font-size:9px;color:var(--text-dim);height:11px;display:flex;align-items:center;font-weight:600;}
+.cal-grid{display:grid;gap:2px;flex:1;min-width:0;}
+.cal-cell{width:100%;aspect-ratio:1;border-radius:2px;background:rgba(0,0,0,0.05);}
+.cal-cell.on{background:var(--green);}
+.cal-cell.future{background:transparent;}
+
+/* ══ 요약 모달 인라인 스타일 (showSummary에서 중복 삽입 방지) ══ */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.sum-card{background:white;border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.06);}
+.sum-card-lbl{font-size:11px;color:var(--text-dim);font-weight:600;margin-bottom:3px;}
+.sum-card-val{font-size:22px;font-weight:800;color:var(--text);}
+.sum-card-unit{font-size:12px;font-weight:500;color:var(--text-dim);margin-left:2px;}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
+.sum-row:last-child{border-bottom:none;}
+.sum-lbl{font-size:13px;color:var(--text-dim);}
+.sum-val{font-size:13px;font-weight:700;color:var(--text);}
 </style>
 </head>
 <body>
@@ -494,9 +525,6 @@ body {
         </button>
     </div>
     <div id="ctrl-active">
-        <div id="active-loc-row">
-            <input type="text" id="active-loc-input" placeholder="산 이름" oninput="curHike.location=this.value;save();">
-        </div>
         <div id="active-ctrl-row">
         <span id="timer-big">00:00:00</span>
         <button id="btn-pause" onclick="onPauseClick()">
@@ -732,7 +760,11 @@ function refreshHistoryBadge(){
 function save(){
     curHike.date=$dateInp.value; curHike.location=$locInp.value;
     localStorage.setItem('hikeApp_current',JSON.stringify(curHike));
-    if(startTs) localStorage.setItem('hikeApp_startTs',startTs.toString());
+    if(startTs){
+        localStorage.setItem('hikeApp_startTs',startTs.toString());
+    } else {
+        localStorage.removeItem('hikeApp_startTs'); /* 일시정지 중: 잔여 키 제거 */
+    }
     localStorage.setItem('hikeApp_pausedMs',pausedMs.toString());
 }
 
@@ -915,9 +947,8 @@ map.on('dragstart',()=>{userDragged=true;});
 function updateMapBtnPositions(){
     const bar = document.getElementById('bottom-bar');
     if(!bar) return;
-    const barH = bar.offsetHeight;
-    const sab  = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab')||'0')||0;
-    const base = barH + sab + 10;   /* 바텀바 상단 + 10px 여백 */
+    const barH = bar.offsetHeight;  /* padding(sab 포함) + 컨텐츠 높이 전부 포함 */
+    const base = barH + 10;         /* 바텀바 상단 + 10px 여백 */
     const GAP  = 52;
     document.getElementById('map-layer-btn').style.bottom = base + 'px';
     document.getElementById('btn-myloc').style.bottom     = (base + GAP) + 'px';
@@ -947,8 +978,9 @@ function updateMap(lat,lng){
 }
 
 /* ══ 기록 ══ */
+let _logIdSeq = Date.now(); /* 단조 증가 id — 동일 ms 내 중복 방지 */
 function recordPoint(type,lat='',lng='',memo=''){
-    curHike.logs.push({id:Date.now(),type,time:nowTime(),lat,lng,memo});
+    curHike.logs.push({id:++_logIdSeq,type,time:nowTime(),lat,lng,memo});
     save();
     if(!screenHidden){prependLog(curHike.logs[curHike.logs.length-1]);refreshStats();}
     document.getElementById('dd-new').style.display=curHike.logs.length>0?'flex':'none';
@@ -1047,13 +1079,17 @@ function renderHistoryList(){
     list.innerHTML='';
     [...hikeHistory].reverse().forEach((hike,ri)=>{
         const i=hikeHistory.length-1-ri;
-        const dist=calcDist(hike.logs);
+        const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
         const s=hike.logs.find(l=>l.type==='출발'), e=hike.logs.find(l=>l.type==='종료');
         const el=document.createElement('div'); el.className='h-item';
         el.innerHTML=`
             <div class="h-item-top">
-                <span class="h-item-name">${hike.location||'이름없음'}</span>
-                <div style="display:flex;align-items:center;gap:4px">
+                <input class="h-item-name-input" data-idx="${i}" value="${(hike.location||'이름없음').replace(/"/g,'&quot;')}"
+                    style="font-size:15px;font-weight:700;color:var(--text);background:transparent;border:none;outline:none;border-bottom:1.5px solid transparent;padding:0 0 1px;min-width:0;flex:1;cursor:pointer;"
+                    onfocus="this.style.borderBottomColor='var(--green)';this.style.cursor='text';"
+                    onblur="saveHistoryName(this)"
+                    onkeydown="if(event.key==='Enter')this.blur();">
+                <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
                     <span class="h-item-date">${hike.date}</span>
                     <button class="btn-del-h" onclick="delHistory(${i},event)">×</button>
                 </div>
@@ -1067,6 +1103,16 @@ function renderHistoryList(){
         list.appendChild(el);
     });
 }
+window.saveHistoryName=function(input){
+    input.style.borderBottomColor='transparent';
+    input.style.cursor='pointer';
+    const i=parseInt(input.dataset.idx);
+    if(isNaN(i)||i<0||i>=hikeHistory.length) return; /* 범위 밖 인덱스 방어 */
+    const newName=input.value.trim();
+    if(!newName||newName===hikeHistory[i].location) return; /* 변경 없으면 저장 생략 */
+    hikeHistory[i].location=newName;
+    localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
+};
 window.delHistory=function(i,e){
     e.stopPropagation();
     if(!confirm('이 기록을 영구 삭제하시겠습니까?')) return;
@@ -1133,8 +1179,8 @@ function renderStats(){
         : 0;
 
     /* ── 최고 기록 ── */
-    const maxDist=hikesData.reduce((a,b)=>b.dist>a.dist?b:a,hikesData[0]);
-    const maxTime=hikesData.reduce((a,b)=>b.totalMin>a.totalMin?b:a,hikesData[0]);
+    const maxDist=hikesData.length>0?hikesData.reduce((a,b)=>b.dist>a.dist?b:a,hikesData[0]):null;
+    const maxTime=hikesData.length>0?hikesData.reduce((a,b)=>b.totalMin>a.totalMin?b:a,hikesData[0]):null;
 
     /* ── 자주 간 산 + 총 산 개수 ── */
     const locMap={};
@@ -1195,37 +1241,6 @@ function renderStats(){
 
     /* ── 렌더링 ── */
     sc.innerHTML=`
-    <style>
-    .st-sec{background:white;border-radius:16px;padding:18px 16px;margin-bottom:14px;box-shadow:0 1px 8px rgba(0,0,0,0.04);}
-    .st-sec-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;}
-    .st-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
-    .st-kpi2{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
-    .st-kpi-card{background:white;border-radius:14px;padding:14px 8px;box-shadow:0 1px 8px rgba(0,0,0,0.04);text-align:center;}
-    .st-kpi-val{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
-    .st-kpi-lbl{font-size:11px;font-weight:600;color:var(--text-dim);margin-top:4px;}
-    .st-kpi-sub{font-size:10px;color:var(--text-dim);margin-top:2px;opacity:0.7;}
-    .chart-box{display:flex;align-items:center;gap:20px;padding:0 2px;}
-    .chart-legend{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
-    .st-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
-    .st-bar-lbl{font-size:12px;color:var(--text-dim);width:26px;text-align:right;flex-shrink:0;font-weight:600;}
-    .st-bar-bg{flex:1;height:10px;background:rgba(0,0,0,0.04);border-radius:5px;overflow:hidden;}
-    .st-bar-fill{height:100%;border-radius:5px;background:var(--green);}
-    .st-bar-cnt{font-size:12px;font-weight:700;color:var(--text);width:20px;text-align:right;flex-shrink:0;}
-    .rec-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
-    .rec-item:last-child{border-bottom:none;padding-bottom:0;}
-    .rec-left{display:flex;flex-direction:column;gap:2px;}
-    .rec-lbl{font-size:13px;font-weight:600;color:var(--text-dim);}
-    .rec-sub{font-size:11px;color:#A0AABA;}
-    .rec-val{font-size:16px;font-weight:800;color:var(--green);}
-    .cal-wrap{display:flex;gap:4px;align-items:flex-start;margin-top:4px;}
-    .cal-dow{display:grid;grid-template-rows:repeat(7,1fr);gap:2px;flex-shrink:0;}
-    .cal-dow-lbl{font-size:9px;color:var(--text-dim);height:11px;display:flex;align-items:center;font-weight:600;}
-    .cal-grid{display:grid;gap:2px;flex:1;min-width:0;}
-    .cal-cell{width:100%;aspect-ratio:1;border-radius:2px;background:rgba(0,0,0,0.05);}
-    .cal-cell.on{background:var(--green);}
-    .cal-cell.future{background:transparent;}
-    </style>
-
     <div class="st-kpi">
         <div class="st-kpi-card">
             <div class="st-kpi-val">${all.length}</div>
@@ -1273,20 +1288,22 @@ function renderStats(){
 
     <div class="st-sec">
         <div class="st-sec-title">나의 최고 기록</div>
+        ${maxDist?`
         <div class="rec-item">
             <div class="rec-left">
                 <span class="rec-lbl">최장 거리</span>
                 <span class="rec-sub">${maxDist.date} · ${maxDist.loc}</span>
             </div>
             <span class="rec-val">${maxDist.dist.toFixed(2)} km</span>
-        </div>
+        </div>`:''}
+        ${maxTime?`
         <div class="rec-item">
             <div class="rec-left">
                 <span class="rec-lbl">최장 시간</span>
                 <span class="rec-sub">${maxTime.date} · ${maxTime.loc}</span>
             </div>
             <span class="rec-val">${Math.floor(maxTime.totalMin/60)}h ${maxTime.totalMin%60}m</span>
-        </div>
+        </div>`:''}
         ${avgPace>0?`
         <div class="rec-item">
             <div class="rec-left">
@@ -1334,7 +1351,15 @@ function renderStats(){
 
 /* ══ 내보내기 ══ */
 function doExport(){
-    const all=[...hikeHistory]; if(curHike.logs.length>0) all.push(curHike);
+    const all=[...hikeHistory];
+    if(curHike.logs.length>0){
+        /* 산행 중 내보내기: 현재까지 누적된 실시간 좌표도 포함 */
+        const exportHike=JSON.parse(JSON.stringify(curHike));
+        if(trackMode==='realtime'&&savedRtCoords.length>0&&!exportHike.rtCoords){
+            exportHike.rtCoords=savedRtCoords.slice();
+        }
+        all.push(exportHike);
+    }
     if(all.length===0) return alert('데이터가 없습니다.');
     let csv='\uFEFF구분,일자,장소,시간,메모,위도,경도,거리누적km\n';
     all.forEach(hike=>{
@@ -1375,6 +1400,8 @@ function doNewHike(){
     if($ctrlAct.classList.contains('show')) return alert('산행을 먼저 종료해주세요.');
     if(curHike.logs.length===0) return alert('저장할 기록이 없습니다.');
     if(!confirm('현재 기록을 보관함에 저장하고 새 산행을 시작합니까?')) return;
+    /* 보관 전 최신 산 이름 반영 */
+    curHike.location=$locInp.value;
     _archiveCurrentHike();
     const _nd=new Date(); const _ndStr=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
     $dateInp.value=_ndStr; $locInp.value='';
@@ -1387,17 +1414,22 @@ function doNewHike(){
 
 /* ══ 버튼 이벤트 ══ */
 $start.addEventListener('click',()=>{
+    $start.disabled=true; /* GPS 응답 전 중복 클릭 방지 */
     setActive(true); startTimer(); lastMoveT=Date.now();
-    document.getElementById('active-loc-input').value=$locInp.value;
     if(trackMode==='realtime') startWatch(); else startIdle();
     fetchAndRecord('출발');
+    /* fetchAndRecord는 비동기 — GPS 응답(성공/실패) 후 버튼은 setActive(true)로 이미 숨겨짐 */
 });
 
 function onEndClick(){
     if(!confirm('산행을 종료하시겠습니까?')) return;
     $end.style.pointerEvents='none'; $pause.style.pointerEvents='none';
     wasAutoPaused=false;
-    if(isPaused){ isPaused=false; }
+    /* 일시정지 중 종료: 현재 시점까지 pausedMs 누산하고 플래그 해제 */
+    if(isPaused){
+        isPaused=false;
+        /* pausedMs는 pauseTimer()에서 이미 누산됨 — startTs가 null이므로 추가 계산 불필요 */
+    }
     stopWatch(); stopIdle();
     if(trackMode==='realtime' && savedRtCoords.length>0){
         curHike.rtCoords = savedRtCoords.slice();
@@ -1415,7 +1447,7 @@ function onEndClick(){
 
     if(!navigator.geolocation){
         recordPoint('종료','','','');
-        setTimeout(()=>{ clearInterval(cdIv); $end.innerHTML=origEndHTML; _finishEnd(); },5000);
+        setTimeout(()=>{ clearInterval(cdIv); $end.innerHTML=origEndHTML; $end.style.pointerEvents=''; $pause.style.pointerEvents=''; _finishEnd(); },5000);
         return;
     }
     /* GPS timeout을 5초로 맞춰 카운트다운과 동기화 */
@@ -1439,8 +1471,7 @@ function _finishEnd(){
     document.getElementById('pause-ico').innerHTML = PAUSE_SVG;
     document.getElementById('pause-lbl').textContent = '정지';
     $pause.classList.remove('on');
-    renderLogsFull(); refreshStats();
-    /* 요약 표시 후 curHike를 새 산행 상태로 초기화 (보관 여부는 모달 버튼에서 결정) */
+    /* finishedHike를 먼저 복사한 뒤 curHike 초기화 */
     const finishedHike=JSON.parse(JSON.stringify(curHike));
     const _nd=new Date(); const _ndStr=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
     curHike={date:_ndStr,location:'',logs:[]};
@@ -1449,7 +1480,7 @@ function _finishEnd(){
     resetHike();
     $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block';
     document.getElementById('dd-new').style.display='none';
-    /* _archiveCurrentHike는 finishedHike를 대상으로 하도록 오버라이드 */
+    refreshStats();
     window._pendingArchiveHike=finishedHike;
     showSummary(finishedHike);
 }
@@ -1491,17 +1522,6 @@ function showSummary(hike){
     }
 
     document.getElementById('summary-content').innerHTML=`
-        <style>
-        .sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-        .sum-card{background:white;border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.06);}
-        .sum-card-lbl{font-size:11px;color:var(--text-dim);font-weight:600;margin-bottom:3px;}
-        .sum-card-val{font-size:22px;font-weight:800;color:var(--text);}
-        .sum-card-unit{font-size:12px;font-weight:500;color:var(--text-dim);margin-left:2px;}
-        .sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.05);}
-        .sum-row:last-child{border-bottom:none;}
-        .sum-lbl{font-size:13px;color:var(--text-dim);}
-        .sum-val{font-size:13px;font-weight:700;color:var(--text);}
-        </style>
         <div class="sum-grid">
             <div class="sum-card"><div class="sum-card-lbl">총 거리</div><div class="sum-card-val">${dist.toFixed(2)}<span class="sum-card-unit">km</span></div></div>
             <div class="sum-card"><div class="sum-card-lbl">총 시간</div><div class="sum-card-val">${totalMin}<span class="sum-card-unit">분</span></div></div>
@@ -1509,7 +1529,15 @@ function showSummary(hike){
             <div class="sum-card"><div class="sum-card-lbl">평균 속도</div><div class="sum-card-val">${speed}<span class="sum-card-unit">km/h</span></div></div>
         </div>
         <div style="background:white;border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.06);">
-            <div class="sum-row"><span class="sum-lbl">산 이름</span><span class="sum-val">${hike.location||'미입력'}</span></div>
+            <div class="sum-row">
+                <span class="sum-lbl">산 이름</span>
+                <input id="sum-loc-input" type="text"
+                    value="${hike.location||''}"
+                    placeholder="산 이름 입력"
+                    style="border:none;outline:none;font-size:13px;font-weight:700;color:var(--text);text-align:right;background:transparent;width:160px;border-bottom:1.5px solid ${hike.location?'transparent':'var(--green)'};padding-bottom:2px;"
+                    onfocus="this.style.borderBottomColor='var(--green)'"
+                    onblur="this.style.borderBottomColor=this.value?'transparent':'var(--green)'">
+            </div>
             <div class="sum-row"><span class="sum-lbl">일자</span><span class="sum-val">${hike.date}</span></div>
             <div class="sum-row"><span class="sum-lbl">출발</span><span class="sum-val">${st?st.time:'-'}</span></div>
             <div class="sum-row"><span class="sum-lbl">종료</span><span class="sum-val">${en?en.time:'-'}</span></div>
@@ -1520,7 +1548,11 @@ function showSummary(hike){
 }
 window.closeSummaryArchive=function(){
     document.getElementById('summary-modal').style.display='none';
-    const hike=window._pendingArchiveHike||curHike;
+    const hike=window._pendingArchiveHike;
+    if(!hike){ console.warn('_pendingArchiveHike 없음 — 저장 취소'); window._pendingArchiveHike=null; return; }
+    /* 요약 모달에서 입력한 산 이름 반영 */
+    const locInput=document.getElementById('sum-loc-input');
+    if(locInput) hike.location=locInput.value.trim()||hike.location;
     window._pendingArchiveHike=null;
     hikeHistory.push(JSON.parse(JSON.stringify(hike)));
     localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory));
@@ -1770,7 +1802,8 @@ window.onload=()=>{
                 document.removeEventListener('visibilitychange',onVis);
                 document.addEventListener('visibilitychange',onVis);
             } else {
-                startTimer(sTs?parseInt(sTs):Date.now(),sPm);
+                /* sTs 없으면 경과시간(sPm)을 기준으로 타이머 복원 — 강제종료 후 재시작 시 시간 유실 방지 */
+                startTimer(sTs?parseInt(sTs):Date.now()-sPm*1000,sPm);
                 lastMoveT=Date.now();
                 if(trackMode==='realtime') startWatch(); else startIdle();
             }

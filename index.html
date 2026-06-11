@@ -65,6 +65,14 @@ body {
     display:none; align-items:center; gap:10px;
 }
 #stat-pill.show { display:flex; }
+#weather-pill {
+    background:var(--glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-radius:12px; padding:6px 12px;
+    box-shadow:var(--shadow-sm); border:1px solid var(--border);
+    display:none; align-items:center; gap:6px;
+    font-size:13px; font-weight:700; color:var(--text);
+}
+#weather-pill.show { display:flex; }
 .stat-item { display:flex; flex-direction:column; align-items:center; gap:1px; }
 .stat-val { font-size:14px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
 .stat-lbl { font-size:10px; color:var(--text-dim); font-weight:500; }
@@ -593,6 +601,10 @@ body {
                 <span class="stat-lbl">지점</span>
             </div>
         </div>
+        <div id="weather-pill">
+            <span id="weather-icon">☀️</span>
+            <span id="weather-text">-°C</span>
+        </div>
     </div>
     <div id="hud-right">
         <div class="icon-btn" onclick="toggleDropdown()" id="menu-btn">
@@ -868,6 +880,7 @@ window.goToMyLocation = function(){
             btn.style.opacity=''; btn.style.transform='';
             const lat=pos.coords.latitude, lng=pos.coords.longitude, acc=pos.coords.accuracy;
             map.setView([lat,lng],16); userDragged=false;
+            checkAndUpdateWeather(lat, lng);
             if(!$ctrlAct.classList.contains('show')){
                 updateLocDot(lat,lng,acc);
                 clearTimeout(window._locDotTimer);
@@ -894,6 +907,9 @@ let routeCoords=[], rtCoords=[];
 let routeLine   = L.polyline([],{color:'#2E7D55',weight:4,opacity:0.8}).addTo(map);
 let rtLine      = L.polyline([],{color:'#E09820',weight:3,opacity:0.7,dashArray:'6 4'}).addTo(map);
 let curHike     = {date:'',location:'',logs:[],startRealTs:0,pausedDuration:0};
+let curWeather = null;
+let lastWeatherFetchT = 0;
+let lastWeatherFetchLoc = null;
 let hikeHistory = [];
 
 /* 타이머 */
@@ -1066,12 +1082,130 @@ document.addEventListener('visibilitychange', async ()=>{
     }
 });
 
+function releaseWakeLock(){
+    clearTimeout(_wakeLockRetryTimer);
+    _wakeLockOn = false;
+    if(_wakeLock){
+        try { _wakeLock.release(); } catch(e){}
+        _wakeLock = null;
+    }
+    const btn = document.getElementById('wake-toggle');
+    if(btn) btn.classList.remove('on');
+    _setWakeStatus('', '');
+}
+
+async function autoAcquireWakeLock(){
+    if(!_wakeLockOn && 'wakeLock' in navigator){
+        try {
+            await _acquireWakeLock();
+        } catch(e){
+            console.warn('Wake Lock auto-activation failed:', e);
+        }
+    }
+}
+
 /* ══ 유틸 ══ */
 function nowTime(){return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
 function hav(la1,lo1,la2,lo2){
     const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180;
     const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
     return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+async function updateWeatherInfo(lat, lng) {
+    try {
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code`;
+        const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5`;
+        
+        const [weatherRes, aqRes] = await Promise.all([
+            fetch(weatherUrl),
+            fetch(aqUrl)
+        ]);
+        
+        if(!weatherRes.ok) return;
+        const weatherData = await weatherRes.json();
+        const temp = Math.round(weatherData.current.temperature_2m);
+        const code = weatherData.current.weather_code;
+        
+        let icon = '☀️';
+        let desc = '맑음';
+        if (code === 0) { icon = '☀️'; desc = '맑음'; }
+        else if (code >= 1 && code <= 3) { icon = '⛅'; desc = '구름 조금'; }
+        else if (code === 45 || code === 48) { icon = '🌫️'; desc = '안개'; }
+        else if (code >= 51 && code <= 55) { icon = '🌧️'; desc = '이슬비'; }
+        else if (code >= 61 && code <= 65) { icon = '🌧️'; desc = '비'; }
+        else if (code >= 71 && code <= 77) { icon = '❄️'; desc = '눈'; }
+        else if (code >= 80 && code <= 82) { icon = '🌧️'; desc = '소나기'; }
+        else if (code >= 95 && code <= 99) { icon = '⛈️'; desc = '뇌우'; }
+        
+        let pm10Val = null;
+        let pm25Val = null;
+        let pm10Desc = '';
+        let pm25Desc = '';
+        
+        if (aqRes.ok) {
+            const aqData = await aqRes.json();
+            if (aqData && aqData.current) {
+                pm10Val = aqData.current.pm10;
+                pm25Val = aqData.current.pm2_5;
+                
+                if (pm10Val !== null) {
+                    if (pm10Val <= 30) pm10Desc = '좋음';
+                    else if (pm10Val <= 80) pm10Desc = '보통';
+                    else if (pm10Val <= 150) pm10Desc = '나쁨';
+                    else pm10Desc = '매우나쁨';
+                }
+                if (pm25Val !== null) {
+                    if (pm25Val <= 15) pm25Desc = '좋음';
+                    else if (pm25Val <= 35) pm25Desc = '보통';
+                    else if (pm25Val <= 75) pm25Desc = '나쁨';
+                    else pm25Desc = '매우나쁨';
+                }
+            }
+        }
+        
+        curWeather = { temp, desc, icon, pm10: pm10Val, pm25: pm25Val, pm10Desc, pm25Desc };
+        if (curHike && $ctrlAct.classList.contains('show')) {
+            curHike.weather = curWeather;
+            save();
+        }
+        
+        const wPill = document.getElementById('weather-pill');
+        const wIcon = document.getElementById('weather-icon');
+        const wText = document.getElementById('weather-text');
+        if (wPill && wIcon && wText) {
+            wIcon.textContent = icon;
+            let dustText = '';
+            if (pm10Desc && pm25Desc) {
+                dustText = ` | 미세:${pm10Desc} · 초미세:${pm25Desc}`;
+            }
+            wText.textContent = `${temp}°C · ${desc}${dustText}`;
+            wPill.style.display = 'flex';
+        }
+    } catch(e) {
+        console.warn('Weather fetch failed:', e);
+    }
+}
+
+function checkAndUpdateWeather(lat, lng) {
+    const now = Date.now();
+    let shouldFetch = false;
+    if (now - lastWeatherFetchT > 15 * 60 * 1000) {
+        shouldFetch = true;
+    } else if (lastWeatherFetchLoc) {
+        const dist = hav(lastWeatherFetchLoc[0], lastWeatherFetchLoc[1], lat, lng) * 1000;
+        if (dist > 1000) {
+            shouldFetch = true;
+        }
+    } else {
+        shouldFetch = true;
+    }
+    
+    if (shouldFetch) {
+        lastWeatherFetchT = now;
+        lastWeatherFetchLoc = [lat, lng];
+        updateWeatherInfo(lat, lng);
+    }
 }
 function calcDist(logs){
     let t=0; const pts=logs.filter(l=>l.lat&&l.lng);
@@ -1125,7 +1259,7 @@ function pauseTimer(){
     if(isPaused) return; isPaused=true;
     pausedMs+=Math.floor((Date.now()-startTs)/1000);
     clearInterval(timerIv); timerIv=null;
-    $timerBig.add ? $timerBig.classList.add('paused') : $timerBig.className+=' paused'; startTs=null;
+    $timerBig.classList.add('paused'); startTs=null;
     try {
         localStorage.setItem('hikeApp_pausedMs',pausedMs.toString());
         localStorage.removeItem('hikeApp_startTs');
@@ -1171,14 +1305,14 @@ function startWatch(){
     if(!navigator.geolocation||watchId!==null) return;
     watchId=navigator.geolocation.watchPosition(
         onWatch, e=>console.warn(e.message),
-        {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+        {enableHighAccuracy:true, timeout:30000, maximumAge:5000}
     );
 }
 function startWatchLow(){
     if(!navigator.geolocation||watchId!==null) return;
     watchId=navigator.geolocation.watchPosition(
         onWatch, e=>console.warn(e.message),
-        {enableHighAccuracy:false, timeout:20000, maximumAge:0}
+        {enableHighAccuracy:false, timeout:30000, maximumAge:10000}
     );
 }
 function stopWatch(){if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}}
@@ -1190,6 +1324,8 @@ function onWatch(pos){
     const alt=pos.coords.altitude;
     if(!screenHidden) updateLocDot(lat,lng,acc);
     if(isPaused) return;
+    if(acc > 40) return; // 오차가 40m 초과인 부정확한 위치 정보는 경로 기록에서 제외
+    checkAndUpdateWeather(lat, lng);
     if(lastWatchCoord){
         const d=hav(lastWatchCoord[0],lastWatchCoord[1],lat,lng)*1000;
         if(d<5){
@@ -1228,7 +1364,7 @@ function startIdle(){
             if(d>=5){lastMoveT=Date.now();try{localStorage.setItem('hikeApp_lastMoveT',lastMoveT.toString());}catch(e){}idleLastCoord=[lat,lng];return;}
         } else {idleLastCoord=[lat,lng];lastMoveT=Date.now();try{localStorage.setItem('hikeApp_lastMoveT',lastMoveT.toString());}catch(e){}return;}
         if(lastMoveT&&Date.now()-lastMoveT>=AUTO_MS){wasAutoPaused=true;doPause();if(!screenHidden){wasAutoPaused=false;setTimeout(()=>alert('30분 이상 이동이 없어 자동 일시정지되었습니다.\n재개 버튼을 눌러 계속하세요.'),200);}}
-    },e=>console.warn(e.message),{enableHighAccuracy:false,timeout:15000,maximumAge:0});
+    },e=>console.warn(e.message),{enableHighAccuracy:false,timeout:30000,maximumAge:10000});
 }
 function stopIdle(){if(idleWatchId!==null){navigator.geolocation.clearWatch(idleWatchId);idleWatchId=null;}idleLastCoord=null;}
 
@@ -1253,12 +1389,14 @@ function doPause(){
     if(isPaused) return;
     pauseTimer();
     if(trackMode==='realtime') stopWatch(); else stopIdle();
+    lastWatchCoord = null;
     recordPoint('일시정지','','',wasAutoPaused?'자동 일시정지':'');
     document.getElementById('pause-ico').innerHTML = RESUME_SVG;
     document.getElementById('pause-lbl').textContent = '재개';
     $pause.classList.add('on');
     $statusDot.className='paused';
     $fab.classList.remove('show');
+    if(_wakeLockOn) releaseWakeLock();
 }
 function doResume(){
     if(!isPaused) return;
@@ -1270,6 +1408,7 @@ function doResume(){
     $pause.classList.remove('on');
     $statusDot.className='active';
     $fab.classList.add('show');
+    if(trackMode==='realtime') autoAcquireWakeLock();
 }
 function onPauseClick(){if(!isPaused)doPause();else doResume();}
 
@@ -1324,6 +1463,7 @@ function fetchAndRecord(type,memo=''){
         pos=>{
             const lat=pos.coords.latitude.toFixed(5),lng=pos.coords.longitude.toFixed(5);
             updateMap(parseFloat(lat),parseFloat(lng)); recordPoint(type,lat,lng,memo);
+            checkAndUpdateWeather(parseFloat(lat), parseFloat(lng));
         },
         ()=>{alert('GPS 신호 없음. 좌표 없이 기록합니다.');recordPoint(type,'','',memo);},
         {enableHighAccuracy:true,timeout:7000,maximumAge:0}
@@ -1487,7 +1627,7 @@ function renderHistoryList(){
     function _fmtDur(min){const h=Math.floor(min/60),m=min%60;return h>0?`${h}:${String(m).padStart(2,'0')}`:`0:${String(m).padStart(2,'0')}`;}
     [...hikeHistory].reverse().forEach((hike,ri)=>{
         const i=hikeHistory.length-1-ri;
-        const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
+        const dist=(hike.rtCoords&&hike.rtCoords.length>1)?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
         
         let durMin = 0;
         if(hike.startRealTs && hike.endRealTs) {
@@ -1522,7 +1662,8 @@ function renderHistoryList(){
         const dateWrap=document.createElement('div');
         dateWrap.style.cssText='display:flex;align-items:center;gap:4px;flex-shrink:0;';
         const dateSpan=document.createElement('span');
-        dateSpan.className='h-item-date'; dateSpan.textContent=hike.date||'';
+        dateSpan.className='h-item-date'; 
+        dateSpan.textContent = (hike.weather ? hike.weather.icon + ' ' : '') + (hike.date || '');
         const delBtn=document.createElement('button');
         delBtn.className='btn-del-h'; delBtn.textContent='×';
         delBtn.addEventListener('click',function(ev){ev.stopPropagation();window.delHistory(i,ev);});
@@ -1611,7 +1752,7 @@ function renderStats(){
                 moveMin = Math.max(0, totalMin - restMin);
             }
         }
-        const dist=h.rtCoords?h.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(h.logs);
+        const dist=(h.rtCoords&&h.rtCoords.length>1)?h.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(h.logs);
         return {date:h.date,loc:h.location||'미입력',dist,totalMin,moveMin,restMin};
     });
 
@@ -1655,7 +1796,7 @@ function renderStats(){
     const todayD=new Date(_now.getFullYear(),_now.getMonth(),_now.getDate());
     const todayDow=todayD.getDay();
     const gridStart=new Date(todayD); gridStart.setDate(gridStart.getDate()-todayDow-51*7);
-    const totalCells=364+todayDow+1; const calCells=[];
+    const totalCells=371; const calCells=[];
     for(let i=0;i<totalCells;i++){ const d=new Date(gridStart); d.setDate(d.getDate()+i); const ds=localDateStr(d); calCells.push({date:ds,hiked:calDates.has(ds),future:d>todayD}); }
     const calCols=Math.ceil(totalCells/7); const DOW_LBL=['일','월','화','수','목','금','토'];
 
@@ -1733,14 +1874,18 @@ function doNewHike(){
     if($ctrlAct.classList.contains('show')) return alert('산행을 먼저 종료해주세요.');
     if(curHike.logs.length===0) return alert('저장할 기록이 없습니다.');
     if(!confirm('현재 기록을 보관함에 저장하고 새 산행을 시작합니까?')) return;
-    curHike.location=$locInp.value; _archiveCurrentHike();
+    curHike.location=$locInp.value;
+    if(trackMode==='realtime' && savedRtCoords.length>0 && !curHike.rtCoords) {
+        curHike.rtCoords = savedRtCoords.slice();
+    }
+    _archiveCurrentHike();
     const _nd=new Date(); const _ndStr=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
     $dateInp.value=_ndStr; $locInp.value='';
     curHike={date:_ndStr,location:'',logs:[],startRealTs:0,pausedDuration:0};
     localStorage.removeKey ? localStorage.removeKey('hikeApp_current') : localStorage.removeItem('hikeApp_current');
     resetHike(); stopTimer(); setActive(false);
     $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block';
-    refreshStats(); Archipelago_closeLogSheet ? Archipelago_closeLogSheet() : closeLogSheet();
+    refreshStats(); (typeof Archipelago_closeLogSheet !== 'undefined') ? Archipelago_closeLogSheet() : closeLogSheet();
 }
 
 /* ══ 버튼 이벤트 ══ */
@@ -1749,7 +1894,10 @@ $start.addEventListener('click',()=>{
     $start.disabled=true; setActive(true); startTimer(); lastMoveT=Date.now();
     try{localStorage.setItem('hikeApp_lastMoveT', lastMoveT.toString());}catch(e){}
     curHike.startRealTs = Date.now();
-    if(trackMode==='realtime') startWatch(); else startIdle();
+    if(trackMode==='realtime') {
+        startWatch();
+        autoAcquireWakeLock();
+    } else startIdle();
     fetchAndRecord('출발');
 });
 
@@ -1789,6 +1937,10 @@ function _finishEnd(){
     $end.style.pointerEvents=''; $pause.style.pointerEvents='';
     document.getElementById('pause-ico').innerHTML = PAUSE_SVG; document.getElementById('pause-lbl').textContent = '정지';
     $pause.classList.remove('on');
+    releaseWakeLock();
+    if(curWeather) {
+        curHike.weather = curWeather;
+    }
     const finishedHike=JSON.parse(JSON.stringify(curHike));
     const _nd=new Date(); const _ndStr=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
     curHike={date:_ndStr,location:'',logs:[],startRealTs:0,pausedDuration:0};
@@ -1822,13 +1974,18 @@ function showSummary(hike){
         moveMin = Math.max(0, totalMin - restMin);
     }
     
-    const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(hike.logs);
+    const dist=(hike.rtCoords&&hike.rtCoords.length>1)?hike.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(hike.logs);
     const speed=moveMin>0?(dist/(moveMin/60)).toFixed(1):'-';
 
     let altInfo='';
     if(hike.rtCoords&&hike.rtCoords.length>0){
         const alts=hike.rtCoords.filter(c=>c.alt!==null).map(c=>c.alt);
         if(alts.length>1){ altInfo=`<div class="sum-row"><span class="sum-lbl">고도 범위</span><span class="sum-val">${Math.min(...alts).toFixed(0)}m ~ ${Math.max(...alts).toFixed(0)}m <span style="font-size:11px;color:#A0AABA">(참고용)</span></span></div>`; }
+    }
+
+    let weatherInfo = '';
+    if(hike.weather) {
+        weatherInfo = `<div class="sum-row"><span class="sum-lbl">날씨</span><span class="sum-val">${hike.weather.icon} ${hike.weather.temp}°C (${hike.weather.desc})</span></div>`;
     }
 
     document.getElementById('summary-content').innerHTML=`
@@ -1841,6 +1998,7 @@ function showSummary(hike){
         <div style="background:white;border-radius:14px;padding:12px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.06);">
             <div class="sum-row"><span class="sum-lbl">산 이름</span><input id="sum-loc-input" type="text" value="${hike.location||''}" placeholder="산 이름 입력" style="border:none;outline:none;font-size:13px;font-weight:700;color:var(--text);text-align:right;background:transparent;width:160px;border-bottom:1.5px solid ${hike.location?'transparent':'var(--green)'};padding-bottom:2px;" onfocus="this.style.borderBottomColor='var(--green)'" onblur="this.style.borderBottomColor=this.value?'transparent':'var(--green)'"></div>
             <div class="sum-row"><span class="sum-lbl">일자</span><span class="sum-val">${hike.date}</span></div>
+            ${weatherInfo}
             <div class="sum-row"><span class="sum-lbl">출발</span><span class="sum-val">${st?st.time.slice(0,5):'-'}</span></div>
             <div class="sum-row"><span class="sum-lbl">종료</span><span class="sum-val">${en?en.time.slice(0,5):'-'}</span></div>
             <div class="sum-row"><span class="sum-lbl">휴식</span><span class="sum-val">${restMin}분</span></div>
@@ -1943,7 +2101,23 @@ document.getElementById('help-modal').addEventListener('click', function(e){ if(
 /* ══ 초기화 ══ */
 window.onload=()=>{
     const _today=new Date(); $dateInp.value=`${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
-    const savedRt=localStorage.getItem('hikeApp_rtCoords'); if(savedRt) try{savedRtCoords=JSON.parse(savedRt);}catch(e){}
+    const savedRt=localStorage.getItem('hikeApp_rtCoords');
+    if(savedRt) {
+        try {
+            savedRtCoords=JSON.parse(savedRt);
+            if(savedRtCoords && savedRtCoords.length > 0) {
+                rtCoords = savedRtCoords.map(c => [c.la, c.lo]);
+                rtDist = 0;
+                for(let i=1; i<savedRtCoords.length; i++) {
+                    rtDist += hav(savedRtCoords[i-1].la, savedRtCoords[i-1].lo, savedRtCoords[i].la, savedRtCoords[i].lo);
+                }
+                rtLine.setLatLngs(rtCoords);
+                if(rtCoords.length > 0) {
+                    lastWatchCoord = rtCoords[rtCoords.length - 1];
+                }
+            }
+        } catch(e){}
+    }
     const savedMode=localStorage.getItem('hikeApp_trackMode')||'manual'; setTrackMode(savedMode);
     const sh=localStorage.getItem('hikeApp_history'); if(sh) try{hikeHistory=JSON.parse(sh);}catch(e){}
     refreshHistoryBadge();
@@ -1952,6 +2126,17 @@ window.onload=()=>{
         $locInp.value=curHike.location||''; curHike.logs.forEach(l=>{if(l.lat&&l.lng) routeCoords.push([+l.lat,+l.lng]);});
         if(routeCoords.length>0){ map.setView(routeCoords[routeCoords.length-1],16); curMarker=L.marker(routeCoords[routeCoords.length-1]).addTo(map); routeLine.setLatLngs(routeCoords); }
         renderLogsFull(); refreshStats();
+        if(curHike.weather) {
+            curWeather = curHike.weather;
+            const wPill = document.getElementById('weather-pill');
+            const wIcon = document.getElementById('weather-icon');
+            const wText = document.getElementById('weather-text');
+            if (wPill && wIcon && wText) {
+                wIcon.textContent = curWeather.icon;
+                wText.textContent = `${curWeather.temp}°C · ${curWeather.desc}`;
+                wPill.style.display = 'flex';
+            }
+        }
         const last=curHike.logs[curHike.logs.length-1];
         if(last&&last.type!=='종료'){
             setActive(true); const sTs=localStorage.getItem('hikeApp_startTs'), sPm=parseInt(localStorage.getItem('hikeApp_pausedMs')||'0');
@@ -1964,12 +2149,22 @@ window.onload=()=>{
                 document.removeEventListener('visibilitychange',onVis); document.addEventListener('visibilitychange',onVis);
             } else {
                 startTimer(sTs?parseInt(sTs):Date.now()-sPm*1000,sPm);
-                if(trackMode==='realtime') startWatch(); else startIdle();
+                if(trackMode==='realtime') {
+                    startWatch();
+                    autoAcquireWakeLock();
+                } else startIdle();
             }
         } else setActive(false);
     } else { setActive(false); }
 
-    if(!scParsed || routeCoords.length === 0){ navigator.geolocation&&navigator.geolocation.getCurrentPosition(pos=>{ map.setView([pos.coords.latitude,pos.coords.longitude],15); },()=>{},{enableHighAccuracy:false,timeout:6000}); }
+    if(!scParsed || routeCoords.length === 0){ 
+        navigator.geolocation&&navigator.geolocation.getCurrentPosition(pos=>{ 
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            map.setView([lat,lng],15); 
+            checkAndUpdateWeather(lat, lng);
+        },()=>{},{enableHighAccuracy:false,timeout:6000}); 
+    }
     refreshStats(); setTimeout(updateMapBtnPositions, 0);
     if(!localStorage.getItem('hikeApp_seenFirstRun')) { setTimeout(() => showLimitModal('firstRun'), 600); } else { setTimeout(checkStorageUsage, 1000); }
 };

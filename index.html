@@ -1125,7 +1125,7 @@ function pauseTimer(){
     if(isPaused) return; isPaused=true;
     pausedMs+=Math.floor((Date.now()-startTs)/1000);
     clearInterval(timerIv); timerIv=null;
-    $timerBig.add ? $timerBig.classList.add('paused') : $timerBig.className+=' paused'; startTs=null;
+    $timerBig.classList.add('paused'); startTs=null;
     try {
         localStorage.setItem('hikeApp_pausedMs',pausedMs.toString());
         localStorage.removeItem('hikeApp_startTs');
@@ -1253,6 +1253,7 @@ function doPause(){
     if(isPaused) return;
     pauseTimer();
     if(trackMode==='realtime') stopWatch(); else stopIdle();
+    lastWatchCoord = null;
     recordPoint('일시정지','','',wasAutoPaused?'자동 일시정지':'');
     document.getElementById('pause-ico').innerHTML = RESUME_SVG;
     document.getElementById('pause-lbl').textContent = '재개';
@@ -1487,7 +1488,7 @@ function renderHistoryList(){
     function _fmtDur(min){const h=Math.floor(min/60),m=min%60;return h>0?`${h}:${String(m).padStart(2,'0')}`:`0:${String(m).padStart(2,'0')}`;}
     [...hikeHistory].reverse().forEach((hike,ri)=>{
         const i=hikeHistory.length-1-ri;
-        const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
+        const dist=(hike.rtCoords&&hike.rtCoords.length>1)?hike.rtCoords.reduce((acc,c,idx,arr)=>idx===0?acc:acc+hav(arr[idx-1].la,arr[idx-1].lo,c.la,c.lo),0):calcDist(hike.logs);
         
         let durMin = 0;
         if(hike.startRealTs && hike.endRealTs) {
@@ -1611,7 +1612,7 @@ function renderStats(){
                 moveMin = Math.max(0, totalMin - restMin);
             }
         }
-        const dist=h.rtCoords?h.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(h.logs);
+        const dist=(h.rtCoords&&h.rtCoords.length>1)?h.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(h.logs);
         return {date:h.date,loc:h.location||'미입력',dist,totalMin,moveMin,restMin};
     });
 
@@ -1655,7 +1656,7 @@ function renderStats(){
     const todayD=new Date(_now.getFullYear(),_now.getMonth(),_now.getDate());
     const todayDow=todayD.getDay();
     const gridStart=new Date(todayD); gridStart.setDate(gridStart.getDate()-todayDow-51*7);
-    const totalCells=364+todayDow+1; const calCells=[];
+    const totalCells=371; const calCells=[];
     for(let i=0;i<totalCells;i++){ const d=new Date(gridStart); d.setDate(d.getDate()+i); const ds=localDateStr(d); calCells.push({date:ds,hiked:calDates.has(ds),future:d>todayD}); }
     const calCols=Math.ceil(totalCells/7); const DOW_LBL=['일','월','화','수','목','금','토'];
 
@@ -1733,14 +1734,18 @@ function doNewHike(){
     if($ctrlAct.classList.contains('show')) return alert('산행을 먼저 종료해주세요.');
     if(curHike.logs.length===0) return alert('저장할 기록이 없습니다.');
     if(!confirm('현재 기록을 보관함에 저장하고 새 산행을 시작합니까?')) return;
-    curHike.location=$locInp.value; _archiveCurrentHike();
+    curHike.location=$locInp.value;
+    if(trackMode==='realtime' && savedRtCoords.length>0 && !curHike.rtCoords) {
+        curHike.rtCoords = savedRtCoords.slice();
+    }
+    _archiveCurrentHike();
     const _nd=new Date(); const _ndStr=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
     $dateInp.value=_ndStr; $locInp.value='';
     curHike={date:_ndStr,location:'',logs:[],startRealTs:0,pausedDuration:0};
     localStorage.removeKey ? localStorage.removeKey('hikeApp_current') : localStorage.removeItem('hikeApp_current');
     resetHike(); stopTimer(); setActive(false);
     $logsDiv.innerHTML=''; document.getElementById('log-empty').style.display='block';
-    refreshStats(); Archipelago_closeLogSheet ? Archipelago_closeLogSheet() : closeLogSheet();
+    refreshStats(); (typeof Archipelago_closeLogSheet !== 'undefined') ? Archipelago_closeLogSheet() : closeLogSheet();
 }
 
 /* ══ 버튼 이벤트 ══ */
@@ -1822,7 +1827,7 @@ function showSummary(hike){
         moveMin = Math.max(0, totalMin - restMin);
     }
     
-    const dist=hike.rtCoords?hike.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(hike.logs);
+    const dist=(hike.rtCoords&&hike.rtCoords.length>1)?hike.rtCoords.reduce((acc,c,i,arr)=>i===0?acc:acc+hav(arr[i-1].la,arr[i-1].lo,c.la,c.lo),0):calcDist(hike.logs);
     const speed=moveMin>0?(dist/(moveMin/60)).toFixed(1):'-';
 
     let altInfo='';
@@ -1943,7 +1948,23 @@ document.getElementById('help-modal').addEventListener('click', function(e){ if(
 /* ══ 초기화 ══ */
 window.onload=()=>{
     const _today=new Date(); $dateInp.value=`${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
-    const savedRt=localStorage.getItem('hikeApp_rtCoords'); if(savedRt) try{savedRtCoords=JSON.parse(savedRt);}catch(e){}
+    const savedRt=localStorage.getItem('hikeApp_rtCoords');
+    if(savedRt) {
+        try {
+            savedRtCoords=JSON.parse(savedRt);
+            if(savedRtCoords && savedRtCoords.length > 0) {
+                rtCoords = savedRtCoords.map(c => [c.la, c.lo]);
+                rtDist = 0;
+                for(let i=1; i<savedRtCoords.length; i++) {
+                    rtDist += hav(savedRtCoords[i-1].la, savedRtCoords[i-1].lo, savedRtCoords[i].la, savedRtCoords[i].lo);
+                }
+                rtLine.setLatLngs(rtCoords);
+                if(rtCoords.length > 0) {
+                    lastWatchCoord = rtCoords[rtCoords.length - 1];
+                }
+            }
+        } catch(e){}
+    }
     const savedMode=localStorage.getItem('hikeApp_trackMode')||'manual'; setTrackMode(savedMode);
     const sh=localStorage.getItem('hikeApp_history'); if(sh) try{hikeHistory=JSON.parse(sh);}catch(e){}
     refreshHistoryBadge();

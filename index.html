@@ -44,10 +44,11 @@ body {
 /* 좌: 타이틀 + 상태 pill */
 #hud-left { display:flex; flex-direction:column; gap:6px; pointer-events:auto; }
 #title-pill {
-    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border-radius:14px; padding:7px 14px;
-    box-shadow:var(--shadow-sm); border:1px solid var(--border);
+    background:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+    border-radius:0; padding:4px 0;
+    box-shadow:none; border:none;
     display:flex; align-items:center; gap:8px;
+    text-shadow: 0 1px 4px rgba(255,255,255,0.95), 0 0 2px rgba(255,255,255,0.95);
 }
 #title-text { font-size:17px; font-weight:800; letter-spacing:3px; color:var(--text); }
 #status-dot {
@@ -59,18 +60,20 @@ body {
 @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(76,175,125,0.25)} 50%{box-shadow:0 0 0 6px rgba(76,175,125,0.1)} }
 
 #stat-pill {
-    background:var(--glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border-radius:12px; padding:6px 12px;
-    box-shadow:var(--shadow-sm); border:1px solid var(--border);
+    background:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+    border-radius:0; padding:4px 0;
+    box-shadow:none; border:none;
     display:none; align-items:center; gap:10px;
+    text-shadow: 0 1px 4px rgba(255,255,255,0.95), 0 0 2px rgba(255,255,255,0.95);
 }
 #stat-pill.show { display:flex; }
 #weather-pill {
-    background:var(--glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border-radius:12px; padding:6px 12px;
-    box-shadow:var(--shadow-sm); border:1px solid var(--border);
+    background:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+    border-radius:0; padding:4px 0;
+    box-shadow:none; border:none;
     display:none; align-items:center; gap:6px;
     font-size:13px; font-weight:700; color:var(--text);
+    text-shadow: 0 1px 4px rgba(255,255,255,0.95), 0 0 2px rgba(255,255,255,0.95);
 }
 #weather-pill.show { display:flex; }
 .stat-item { display:flex; flex-direction:column; align-items:center; gap:1px; }
@@ -1142,6 +1145,8 @@ async function updateWeatherInfo(lat, lng) {
         let pm25Val = null;
         let pm10Desc = '';
         let pm25Desc = '';
+        let pm10Emoji = '';
+        let pm25Emoji = '';
         
         if (aqRes.ok) {
             const aqData = await aqRes.json();
@@ -1150,21 +1155,21 @@ async function updateWeatherInfo(lat, lng) {
                 pm25Val = aqData.current.pm2_5;
                 
                 if (pm10Val !== null) {
-                    if (pm10Val <= 30) pm10Desc = '좋음';
-                    else if (pm10Val <= 80) pm10Desc = '보통';
-                    else if (pm10Val <= 150) pm10Desc = '나쁨';
-                    else pm10Desc = '매우나쁨';
+                    if (pm10Val <= 30) { pm10Desc = '좋음'; pm10Emoji = '🔵'; }
+                    else if (pm10Val <= 80) { pm10Desc = '보통'; pm10Emoji = '🟢'; }
+                    else if (pm10Val <= 150) { pm10Desc = '나쁨'; pm10Emoji = '🟡'; }
+                    else { pm10Desc = '매우나쁨'; pm10Emoji = '🔴'; }
                 }
                 if (pm25Val !== null) {
-                    if (pm25Val <= 15) pm25Desc = '좋음';
-                    else if (pm25Val <= 35) pm25Desc = '보통';
-                    else if (pm25Val <= 75) pm25Desc = '나쁨';
-                    else pm25Desc = '매우나쁨';
+                    if (pm25Val <= 15) { pm25Desc = '좋음'; pm25Emoji = '🔵'; }
+                    else if (pm25Val <= 35) { pm25Desc = '보통'; pm25Emoji = '🟢'; }
+                    else if (pm25Val <= 75) { pm25Desc = '나쁨'; pm25Emoji = '🟡'; }
+                    else { pm25Desc = '매우나쁨'; pm25Emoji = '🔴'; }
                 }
             }
         }
         
-        curWeather = { temp, desc, icon, pm10: pm10Val, pm25: pm25Val, pm10Desc, pm25Desc };
+        curWeather = { temp, desc, icon, pm10: pm10Val, pm25: pm25Val, pm10Desc, pm25Desc, pm10Emoji, pm25Emoji };
         if (curHike && $ctrlAct.classList.contains('show')) {
             curHike.weather = curWeather;
             save();
@@ -1176,8 +1181,8 @@ async function updateWeatherInfo(lat, lng) {
         if (wPill && wIcon && wText) {
             wIcon.textContent = icon;
             let dustText = '';
-            if (pm10Desc && pm25Desc) {
-                dustText = ` | 미세:${pm10Desc} · 초미세:${pm25Desc}`;
+            if (pm10Emoji && pm25Emoji) {
+                dustText = ` | 미세:${pm10Emoji} · 초미세:${pm25Emoji}`;
             }
             wText.textContent = `${temp}°C · ${desc}${dustText}`;
             wPill.style.display = 'flex';
@@ -2133,7 +2138,19 @@ window.onload=()=>{
             const wText = document.getElementById('weather-text');
             if (wPill && wIcon && wText) {
                 wIcon.textContent = curWeather.icon;
-                wText.textContent = `${curWeather.temp}°C · ${curWeather.desc}`;
+                let dustText = '';
+                if (curWeather.pm10Emoji && curWeather.pm25Emoji) {
+                    dustText = ` | 미세:${curWeather.pm10Emoji} · 초미세:${curWeather.pm25Emoji}`;
+                } else if (curWeather.pm10Desc && curWeather.pm25Desc) {
+                    const mapEmoji = (desc) => {
+                        if (desc === '좋음') return '🔵';
+                        if (desc === '보통') return '🟢';
+                        if (desc === '나쁨') return '🟡';
+                        return '🔴';
+                    };
+                    dustText = ` | 미세:${mapEmoji(curWeather.pm10Desc)} · 초미세:${mapEmoji(curWeather.pm25Desc)}`;
+                }
+                wText.textContent = `${curWeather.temp}°C · ${curWeather.desc}${dustText}`;
                 wPill.style.display = 'flex';
             }
         }

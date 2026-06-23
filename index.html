@@ -931,8 +931,8 @@ window.addEventListener('resize',()=>{alignBody();map.invalidateSize();updateMap
 /* ══ 상태 ══ */
 let curMarker=null, locDot=null, locCircle=null;
 let routeCoords=[], rtCoords=[];
-let routeLine   = L.polyline([],{color:'#0B2E6F',weight:4,opacity:0.8}).addTo(map);
-let rtLine      = L.polyline([],{color:'#8AB4F8',weight:3,opacity:0.7,dashArray:'6 4'}).addTo(map);
+let routeLine   = L.polyline([],{color:'#0B2E6F',weight:5,opacity:0.95}).addTo(map);
+let rtLine      = L.polyline([],{color:'#0B2E6F',weight:4,opacity:0.9,dashArray:'6 4'}).addTo(map);
 let curHike     = {date:'',location:'',logs:[],startRealTs:0,pausedDuration:0};
 let curWeather = null;
 let lastWeatherFetchT = 0;
@@ -1600,7 +1600,7 @@ window.showHistoryOnMap = function(idx){
     if(hasRt){
         const coords = hike.rtCoords.map(c => [c.la, c.lo]);
         const line = L.polyline(coords, {
-            color:'#8AB4F8', weight:4, opacity:0.85, dashArray:'8 5'
+            color:'#0B2E6F', weight:5, opacity:0.95, dashArray:'8 5'
         }).addTo(map);
         previewLayers.push(line);
         map.fitBounds(line.getBounds(), {padding:[40,40]});
@@ -1908,7 +1908,7 @@ function resetHike(){
     routeCoords=[]; rtCoords=[]; rtDist=0; lastWatchCoord=null; idleLastCoord=null; savedRtCoords=[]; lastSaveCoordT=0;
     localStorage.removeItem('hikeApp_rtCoords');
     routeLine.setLatLngs([]); map.removeLayer(rtLine);
-    rtLine=L.polyline([],{color:'#8AB4F8',weight:3,opacity:0.7,dashArray:'6 4'}).addTo(map);
+    rtLine=L.polyline([],{color:'#0B2E6F',weight:4,opacity:0.9,dashArray:'6 4'}).addTo(map);
     if(curMarker){map.removeLayer(curMarker);curMarker=null;}
 }
 
@@ -2273,7 +2273,7 @@ async function checkStorageUsage() {
 }
 
 function openStatsWithCheck() { if(hikeHistory.length < 5) { showLimitModal('statsLow', () => { openStats(); }); return; } openStats(); }
-function setTrackModeWithCheck(mode) { if(mode === 'realtime' && !localStorage.getItem('hikeApp_seenRealtime')) { showLimitModal('realtimeMode', () => window.setTrackMode(mode)); return; } window.setTrackMode(mode); }
+function setTrackModeWithCheck(mode) { window.setTrackMode(mode); if(mode === 'realtime' && !localStorage.getItem('hikeApp_seenRealtime')) { showLimitModal('realtimeMode', null); } }
 
 /* ══ 도움말 모달 ══ */
 window.openHelpModal = function(){ const m = document.getElementById('help-modal'); m.style.display = 'flex'; document.getElementById('help-scroll').scrollTop = 0; };

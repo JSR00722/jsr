@@ -12,8 +12,8 @@
     --sab: env(safe-area-inset-bottom,0px);
     --glass: rgba(255,255,255,0.88);
     --glass2: rgba(255,255,255,0.96);
-    --shadow: 0 4px 24px rgba(0,0,0,0.13);
-    --shadow-sm: 0 2px 10px rgba(0,0,0,0.10);
+    --shadow: 0 6px 24px rgba(14,73,85,0.08);
+    --shadow-sm: 0 3px 10px rgba(14,73,85,0.06);
     --theme: #0E4955;
     --theme-light: #4895EF;
     --danger: #E05252;
@@ -78,12 +78,13 @@ body {
 #hud-right { display:flex; flex-direction:column; gap:8px; align-items:flex-end; pointer-events:auto; }
 .icon-btn {
     width:42px; height:42px; border-radius:13px;
-    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    background:rgba(255, 255, 255, 0.95);
     border:1px solid var(--border); box-shadow:var(--shadow-sm);
     display:flex; align-items:center; justify-content:center;
-    cursor:pointer; font-size:18px; color:var(--text); transition:transform 0.12s, background 0.12s;
+    cursor:pointer; font-size:18px; color:var(--text);
+    transition:transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, box-shadow 0.2s;
 }
-.icon-btn:active { transform:scale(0.92); background:rgba(255,255,255,1); }
+.icon-btn:active { transform:scale(0.90); background:rgba(255,255,255,1); box-shadow: 0 2px 6px rgba(14, 73, 85, 0.15); }
 
 /* ══ 중앙 FAB (산행 중 지점기록) ══ */
 #fab-record {
@@ -107,8 +108,20 @@ body {
     padding:0 16px calc(var(--sab) + 12px);
 }
 
+@keyframes slideUpActive {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUpIdle {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
 /* 대기 중 */
-#ctrl-idle { display:flex; flex-direction:column; gap:10px; }
+#ctrl-idle {
+    display:flex; flex-direction:column; gap:10px;
+    animation: slideUpIdle 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
 #input-area {
     display:flex; flex-direction:column; gap:8px;
     background:none; border:none; box-shadow:none; padding:0;
@@ -126,7 +139,7 @@ body {
 /* 추적 모드 토글 */
 #track-toggle {
     flex: 5.5; display:flex;
-    background:rgba(255, 255, 255, 0.45); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    background:rgba(255, 255, 255, 0.85);
     border:1px solid rgba(255, 255, 255, 0.2); border-radius:12px;
     padding:2px; gap:2px; box-shadow:none;
 }
@@ -149,18 +162,23 @@ body {
     border:none; color:white; cursor:pointer;
     background:linear-gradient(135deg, var(--theme), var(--theme-light));
     box-shadow:0 8px 24px rgba(14,73,85,0.4);
-    transition:transform 0.12s, filter 0.12s;
+    transition:transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s, box-shadow 0.2s;
 }
-#btn-start:active { transform:scale(0.98); }
+#btn-start:active { transform:scale(0.94); box-shadow:0 4px 12px rgba(14,73,85,0.25); }
 
 /* 산행 중 — 일시정지+종료 작은 바 */
 #ctrl-active {
     display:none;
-    background:rgba(255, 255, 255, 0.5); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-    border-radius:var(--r); padding:10px 12px; border:1px solid rgba(255, 255, 255, 0.35);
+    background:rgba(255, 255, 255, 0.95);
+    border-radius:var(--r); padding:10px 12px; border:1px solid rgba(0, 0, 0, 0.05);
     box-shadow:var(--shadow); gap:8px; align-items:center;
 }
-#ctrl-active.show { display:flex; flex-direction:column; gap:6px; }
+#ctrl-active.show {
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    animation: slideUpActive 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+}
 #active-ctrl-row { display:flex; align-items:center; gap:8px; width:100%; }
 #timer-big {
     flex:1; font-size:22px; font-weight:800; color:var(--text);
@@ -341,14 +359,14 @@ body {
 #map-layer-btn, #btn-myloc, #btn-dim-float, #btn-show-logs {
     position:absolute; right:16px; z-index:10;
     width:46px; height:46px; border-radius:50%;
-    background:var(--glass2); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    background:rgba(255, 255, 255, 0.95);
     border:1px solid var(--border); box-shadow:var(--shadow-sm);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer; color:var(--text);
-    transition:bottom 0.35s cubic-bezier(0.32,0.72,0,1), transform 0.12s, background 0.12s;
+    transition:bottom 0.35s cubic-bezier(0.32,0.72,0,1), transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, box-shadow 0.2s;
 }
 #map-layer-btn:active, #btn-myloc:active, #btn-dim-float:active, #btn-show-logs:active {
-    transform:scale(0.92); background:rgba(255,255,255,1);
+    transform:scale(0.90); background:rgba(255,255,255,1); box-shadow: 0 2px 6px rgba(14, 73, 85, 0.15);
 }
 #btn-show-logs { display:none; }
 #btn-show-logs.show { display:flex; }
@@ -388,7 +406,7 @@ body {
 }
 #preview-badge.show { display:flex; }
 #preview-pill {
-    background:rgba(14,73,85,0.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    background:rgba(14,73,85,0.96);
     border-radius:20px; padding:7px 14px 7px 12px;
     box-shadow:var(--shadow-sm);
     display:flex; align-items:center; gap:8px;

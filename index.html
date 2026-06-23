@@ -148,7 +148,7 @@ body {
     border:none; background:none; cursor:pointer; transition:all 0.2s; border-radius:10px;
     letter-spacing:-0.2px;
     display: flex; align-items: center; justify-content: center; white-space: nowrap;
-    opacity: 0.6;
+    opacity: 0.6; outline: none;
 }
 .track-btn.on {
     background:rgba(14,73,85,0.09); color:var(--theme); font-weight:800;
@@ -969,8 +969,15 @@ const $statPill = document.getElementById('stat-pill');
 window.setTrackMode = function(m){
     if($ctrlAct.classList.contains('show')) return;
     trackMode=m;
-    document.getElementById('btn-mode-manual').classList.toggle('on',m==='manual');
-    document.getElementById('btn-mode-realtime').classList.toggle('on',m==='realtime');
+    const btnManual = document.getElementById('btn-mode-manual');
+    const btnRealtime = document.getElementById('btn-mode-realtime');
+    if (m === 'manual') {
+        btnManual.classList.add('on');
+        btnRealtime.classList.remove('on');
+    } else {
+        btnManual.classList.remove('on');
+        btnRealtime.classList.add('on');
+    }
     localStorage.setItem('hikeApp_trackMode',m);
 };
 

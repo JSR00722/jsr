@@ -670,6 +670,10 @@ body {
         <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 L10 13"/><polyline points="6,7 10,3 14,7"/><path d="M4 14 L4 16 C4 16.6 4.4 17 5 17 L15 17 C15.6 17 16 16.6 16 16 L16 14"/></svg></span>
         내보내기
     </button>
+    <button class="dd-item" onclick="ddAction('import')">
+        <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17 L10 7"/><polyline points="6,13 10,17 14,13"/><path d="M4 6 L4 4 C4 3.4 4.4 3 5 3 L15 3 C15.6 3 16 3.4 16 4 L16 6"/></svg></span>
+        가져오기
+    </button>
     <button class="dd-item" onclick="ddAction('dim')">
         <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.5"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="10" y1="16" x2="10" y2="18"/><line x1="2" y1="10" x2="4" y2="10"/><line x1="16" y1="10" x2="18" y2="10"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="14.4" y1="14.4" x2="15.8" y2="15.8"/><line x1="4.2" y1="15.8" x2="5.6" y2="14.4"/><line x1="14.4" y1="5.6" x2="15.8" y2="4.2"/></svg></span>
         화면 밝기<span id="dd-dim-on" style="display:none;margin-left:auto;font-size:10px;font-weight:700;color:var(--warn);background:rgba(224,152,32,0.12);border-radius:6px;padding:2px 7px;">ON</span>
@@ -807,6 +811,19 @@ body {
         <div style="display:flex;gap:10px;margin-top:16px;">
             <button onclick="closeSummaryDiscard()" style="flex:1;padding:14px;background:rgba(0,0,0,0.06);color:var(--text-dim);border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">저장 안 함</button>
             <button onclick="closeSummaryArchive()" style="flex:2;padding:14px;background:var(--theme);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">보관함에 저장</button>
+        </div>
+    </div>
+</div>
+<div id="name-input-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
+    <div style="width:100%;max-width:560px;background:#F5F7F5;border-radius:22px 22px 0 0;padding:20px 20px calc(var(--sab,0px) + 20px);box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
+        <div style="width:40px;height:4px;background:#C8D0C8;border-radius:2px;margin:0 auto 16px;"></div>
+        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:12px;text-align:center;">🏔 산 이름 입력</div>
+        <div style="background:white;border-radius:14px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-bottom:16px;display:flex;align-items:center;">
+            <input type="text" id="custom-loc-name" lang="ko" placeholder="산 이름을 입력하세요" style="width:100%;border:none;outline:none;font-size:15px;font-weight:700;color:var(--text);background:transparent;" autofocus>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button id="btn-name-cancel" style="flex:1;padding:14px;background:rgba(0,0,0,0.06);color:var(--text-dim);border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">취소</button>
+            <button id="btn-name-save" style="flex:2;padding:14px;background:var(--theme);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">저장</button>
         </div>
     </div>
 </div>
@@ -950,6 +967,7 @@ window.ddAction=function(a){
     if(a==='history') openHistory();
     else if(a==='stats') openStatsWithCheck();
     else if(a==='export') doExport();
+    else if(a==='import') document.getElementById('csv-import-file').click();
     else if(a==='new') doNewHike();
     else if(a==='dim') openDimPanel();
 };
@@ -2012,23 +2030,146 @@ window.closeSummaryArchive=function(){
     const hike=window._pendingArchiveHike;
     if(!hike){ document.getElementById('summary-modal').style.display='none'; window._pendingArchiveHike=null; return; }
     
-    // 보관함 저장 시 산 이름 입력 받기
-    const defaultLoc = hike.location || "";
-    const userInput = prompt("저장할 산 이름을 입력해 주세요.", defaultLoc);
+    const nameModal = document.getElementById('name-input-modal');
+    const nameInp = document.getElementById('custom-loc-name');
+    nameInp.value = hike.location || "";
+    nameModal.style.display = 'flex';
     
-    // 취소를 누른 경우 저장을 진행하지 않고 모달창을 유지합니다.
-    if(userInput === null){
-        return;
+    // 가상 키보드 팝업 및 포커스 유도
+    setTimeout(() => nameInp.focus(), 150);
+    
+    const btnCancel = document.getElementById('btn-name-cancel');
+    const btnSave = document.getElementById('btn-name-save');
+    
+    const onCancel = () => {
+        nameModal.style.display = 'none';
+    };
+    
+    const onSave = () => {
+        const val = nameInp.value.trim();
+        hike.location = val || "이름없음";
+        
+        nameModal.style.display = 'none';
+        document.getElementById('summary-modal').style.display='none';
+        window._pendingArchiveHike=null;
+        
+        hikeHistory.push(JSON.parse(JSON.stringify(hike)));
+        try { localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory)); }catch(e){ alert('용량 한도 초과로 인해 보관함 저장이 실패했습니다.'); }
+        refreshHistoryBadge();
+    };
+    
+    btnCancel.onclick = onCancel;
+    btnSave.onclick = onSave;
+    nameInp.onkeydown = (e) => { if(e.key === 'Enter') onSave(); };
+};
+
+window.handleCsvImport = function(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e){
+        const text = e.target.result;
+        try {
+            const history = parseHikeCsv(text);
+            if(history.length === 0){
+                alert("가져올 수 있는 유효한 산행 기록이 없습니다. 올바른 CSV 파일인지 확인해주세요.");
+                return;
+            }
+            if(confirm(`${history.length}건의 산행 기록을 가져와 보관함에 병합하시겠습니까?`)){
+                hikeHistory.push(...history);
+                localStorage.setItem('hikeApp_history', JSON.stringify(hikeHistory));
+                refreshHistoryBadge();
+                if(document.getElementById('history-panel').classList.contains('open')){
+                    renderHistoryList();
+                }
+                alert("성공적으로 보관함에 병합되었습니다.");
+            }
+        } catch(err){
+            alert("가져오기 중 오류가 발생했습니다: " + err.message);
+        }
+    };
+    reader.readAsText(file, 'utf-8');
+    event.target.value = '';
+};
+
+function parseHikeCsv(csvText){
+    const lines = csvText.split(/\r?\n/);
+    if(lines.length < 2) return [];
+    
+    const header = lines[0].replace(/^\uFEFF/, '').trim();
+    if(!header.includes("구분") || !header.includes("일자") || !header.includes("장소")){
+        throw new Error("유효한 산행 기록 CSV 파일이 아닙니다.");
     }
     
-    hike.location = userInput.trim() || "이름없음";
+    const rows = [];
+    for(let i = 1; i < lines.length; i++){
+        const line = lines[i].trim();
+        if(!line) continue;
+        
+        const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
+        const cols = matches.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+        if(cols.length < 5) continue;
+        
+        rows.push({
+            type: cols[0],
+            date: cols[1],
+            location: cols[2],
+            time: cols[3],
+            memo: cols[4],
+            lat: cols[5] || '',
+            lng: cols[6] || '',
+            cum: parseFloat(cols[7]) || 0
+        });
+    }
     
-    document.getElementById('summary-modal').style.display='none';
-    window._pendingArchiveHike=null;
-    hikeHistory.push(JSON.parse(JSON.stringify(hike)));
-    try { localStorage.setItem('hikeApp_history',JSON.stringify(hikeHistory)); }catch(e){ alert('용량 한도 초과로 인해 보관함 저장이 실패했습니다.'); }
-    refreshHistoryBadge();
-};
+    const groups = {};
+    rows.forEach(row => {
+        const key = `${row.date}_${row.location}`;
+        if(!groups[key]){
+            groups[key] = [];
+        }
+        groups[key].push(row);
+    });
+    
+    const importedHikes = [];
+    Object.keys(groups).forEach(key => {
+        const groupRows = groups[key];
+        groupRows.sort((a,b) => a.time.localeCompare(b.time));
+        
+        const first = groupRows[0];
+        const logs = groupRows.map(r => ({
+            id: Date.now() + Math.random(),
+            type: r.type,
+            time: r.time,
+            lat: r.lat,
+            lng: r.lng,
+            memo: r.memo,
+            realTs: Date.now()
+        }));
+        
+        const rtCoords = groupRows
+            .filter(r => r.lat && r.lng)
+            .map(r => ({
+                la: parseFloat(r.lat),
+                lo: parseFloat(r.lng),
+                alt: null,
+                t: Date.now()
+            }));
+        
+        importedHikes.push({
+            date: first.date,
+            location: first.location,
+            logs: logs,
+            rtCoords: rtCoords.length > 1 ? rtCoords : undefined,
+            startRealTs: Date.now() - 3600000,
+            endRealTs: Date.now(),
+            pausedDuration: 0
+        });
+    });
+    
+    return importedHikes;
+}
 window.closeSummaryDiscard=function(){ document.getElementById('summary-modal').style.display='none'; window._pendingArchiveHike=null; };
 
 /* ══ 한계 안내 모달 시스템 ══ */
@@ -2266,5 +2407,6 @@ window.onload=()=>{
     if(!localStorage.getItem('hikeApp_seenFirstRun')) { setTimeout(() => showLimitModal('firstRun'), 600); } else { setTimeout(checkStorageUsage, 1000); }
 };
 </script>
+<input type="file" id="csv-import-file" accept=".csv" style="display:none;" onchange="handleCsvImport(event)">
 </body>
 </html>

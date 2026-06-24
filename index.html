@@ -150,10 +150,20 @@ body {
     display: flex; align-items: center; justify-content: center; white-space: nowrap;
     opacity: 0.6; outline: none;
 }
+.track-btn:focus, .track-btn:active {
+    outline: none;
+    background: none;
+    box-shadow: none;
+}
 .track-btn.on {
     background:rgba(11,46,111,0.09); color:var(--theme); font-weight:800;
     box-shadow:none;
     opacity: 1;
+}
+.track-btn.on:focus, .track-btn.on:active {
+    background:rgba(11,46,111,0.09);
+    outline: none;
+    box-shadow: none;
 }
 .track-btn:disabled { opacity:0.4; pointer-events:none; }
 
@@ -696,7 +706,7 @@ body {
         <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17 L10 7"/><polyline points="6,13 10,17 14,13"/><path d="M4 6 L4 4 C4 3.4 4.4 3 5 3 L15 3 C15.6 3 16 3.4 16 4 L16 6"/></svg></span>
         가져오기
     </button>
-    <button class="dd-item" onclick="ddAction('dim')">
+    <button class="dd-item" onclick="ddAction('dim')" style="display:none;">
         <span class="ico dd-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.5"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="10" y1="16" x2="10" y2="18"/><line x1="2" y1="10" x2="4" y2="10"/><line x1="16" y1="10" x2="18" y2="10"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="14.4" y1="14.4" x2="15.8" y2="15.8"/><line x1="4.2" y1="15.8" x2="5.6" y2="14.4"/><line x1="14.4" y1="5.6" x2="15.8" y2="4.2"/></svg></span>
         화면 밝기<span id="dd-dim-on" style="display:none;margin-left:auto;font-size:10px;font-weight:700;color:var(--theme-light);background:rgba(138,180,248,0.12);border-radius:6px;padding:2px 7px;">ON</span>
     </button>
@@ -978,6 +988,8 @@ window.setTrackMode = function(m){
         btnManual.classList.remove('on');
         btnRealtime.classList.add('on');
     }
+    btnManual.blur();
+    btnRealtime.blur();
     localStorage.setItem('hikeApp_trackMode',m);
 };
 

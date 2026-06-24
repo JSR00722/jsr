@@ -145,27 +145,35 @@ body {
 }
 .track-btn {
     flex:1; padding:7px 0; font-size:13px; font-weight:700; color:var(--text-dim);
-    border:none; background:none; cursor:pointer; transition:all 0.2s; border-radius:10px;
+    border:none; background:transparent; cursor:pointer; transition:all 0.2s; border-radius:10px;
     letter-spacing:-0.2px;
     display: flex; align-items: center; justify-content: center; white-space: nowrap;
     opacity: 0.6; outline: none;
+    -webkit-appearance: none;
+    appearance: none;
 }
-.track-btn:focus, .track-btn:active {
-    outline: none;
-    background: none;
-    box-shadow: none;
+.track-btn:focus, .track-btn:active, .track-btn:hover {
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+.track-btn:not(.on) {
+    background: transparent !important;
+    color: var(--text-dim) !important;
+    opacity: 0.6 !important;
 }
 .track-btn.on {
-    background:rgba(11,46,111,0.09); color:var(--theme); font-weight:800;
+    background:rgba(11,46,111,0.09) !important; color:var(--theme) !important; font-weight:800;
     box-shadow:none;
-    opacity: 1;
+    opacity: 1 !important;
 }
-.track-btn.on:focus, .track-btn.on:active {
-    background:rgba(11,46,111,0.09);
-    outline: none;
-    box-shadow: none;
+.track-btn.on:focus, .track-btn.on:active, .track-btn.on:hover {
+    background:rgba(11,46,111,0.09) !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
-.track-btn:disabled { opacity:0.4; pointer-events:none; }
+.track-btn:disabled { opacity:0.4 !important; pointer-events:none; }
 
 #btn-start {
     padding:18px; font-size:18px; font-weight:500; border-radius:var(--r);

@@ -143,9 +143,9 @@ body {
 /* 추적 모드 토글 */
 #track-toggle {
     flex: 5.5; display:flex;
-    background:rgba(255, 255, 255, 0.85);
-    border:1px solid rgba(255, 255, 255, 0.2); border-radius:12px;
-    padding:2px; gap:2px; box-shadow:none;
+    background:rgba(255, 255, 255, 0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(255, 255, 255, 0.35); border-radius:12px;
+    padding:2px; gap:2px; box-shadow:var(--shadow-sm);
 }
 .track-btn {
     flex:1; padding:7px 0; font-size:13px; font-weight:700; color:var(--text-dim);
@@ -156,7 +156,7 @@ body {
     user-select: none; -webkit-user-select: none;
 }
 .track-btn.on {
-    background:rgba(11,46,111,0.09); color:var(--theme); font-weight:800;
+    background:rgba(11,46,111,0.15); color:var(--theme); font-weight:800;
     box-shadow:none;
     opacity: 1;
 }
@@ -592,7 +592,7 @@ body {
     <div id="hud-left">
         <div id="title-pill">
             <div id="status-dot"></div>
-            <span id="title-text">山行<sub style="font-size:9px;font-weight:400;opacity:0.4;bottom:0;margin-left:2px;">v1.3</sub></span>
+            <span id="title-text">山行<sub style="font-size:9px;font-weight:400;opacity:0.4;bottom:0;margin-left:2px;">v1.4</sub></span>
             <span class="title-sep">|</span>
             <span id="title-weather">--</span>
             <span class="title-sep">|</span>

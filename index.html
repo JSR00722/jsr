@@ -132,7 +132,7 @@ body {
 }
 #input-row { display:flex; gap:8px; align-items:center; }
 #hike-date {
-    flex: 4.5; min-width: 0; padding:11px 12px;
+    flex: 4.5; min-width: 0; height: 42px; padding:0 12px;
     background:rgba(255, 255, 255, 0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border:1px solid rgba(255, 255, 255, 0.35); border-radius:12px;
     color:var(--text); font-size:15px; font-weight:700; -webkit-appearance:none; appearance:none;
@@ -142,13 +142,13 @@ body {
 #hike-date::-webkit-calendar-picker-indicator { opacity:0.5; cursor:pointer; }
 /* 추적 모드 토글 */
 #track-toggle {
-    flex: 5.5; display:flex;
+    flex: 5.5; display:flex; height: 42px;
     background:rgba(255, 255, 255, 0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border:1px solid rgba(255, 255, 255, 0.35); border-radius:12px;
     padding:2px; gap:2px; box-shadow:var(--shadow-sm);
 }
 .track-btn {
-    flex:1; padding:7px 0; font-size:13px; font-weight:700; color:var(--text-dim);
+    flex:1; padding:0; height:100%; font-size:13px; font-weight:700; color:var(--text-dim);
     border:none; background:transparent; cursor:pointer; transition:all 0.2s; border-radius:10px;
     letter-spacing:-0.2px;
     display: flex; align-items: center; justify-content: center; white-space: nowrap;
